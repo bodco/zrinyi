@@ -64,19 +64,37 @@ export function archie(mood = 'happy', cls = '', outfit = OUTFIT) {
        <path d="M31 45 C33 38 38 28 42 17" stroke="${BROWN_D}" stroke-width="1.6" fill="none" stroke-linecap="round" opacity=".7"/>
        <path d="M78 17 C86 14 95 21 97 32 C98 40 94 46 89 45 C82 42 77 32 74 22 Z" fill="${BROWN}" ${S}/>
        <path d="M89 45 C87 38 82 28 78 17" stroke="${BROWN_D}" stroke-width="1.6" fill="none" stroke-linecap="round" opacity=".7"/>`;
-  // a raised foreleg replaces the right front leg (never a 5th limb): it grows out of the shoulder
-  const limb = (x1, y1, x2, y2) => `<path d="M${x1} ${y1} L${x2} ${y2}" stroke="${LINE}" stroke-width="13" fill="none" stroke-linecap="round"/>
-    <path d="M${x1} ${y1} L${x2} ${y2}" stroke="${WHITE}" stroke-width="9.600" fill="none" stroke-linecap="round"/>`;
+  // Body: a pear-shaped sitting body, two hind legs as round haunches with feet, two front legs.
+  // A raised paw (wave/point/think) REPLACES the right front leg: a bent foreleg from the shoulder.
+  const leg = (x) => `<path d="M${x} 97 L${x} 113 C${x} 119.500 ${x + 9} 119.500 ${x + 9} 113 L${x + 9} 97" fill="${WHITE}" ${S}/>
+    <path d="M${x + 3} 116 v2.500 M${x + 6} 116 v2.500" stroke="${LINE}" stroke-width="1.200" stroke-linecap="round"/>`;
+  const arm = (x1, y1, cx, cy, x2, y2, px, py, pads) => {
+    const d = `M${x1} ${y1} Q${cx} ${cy} ${x2} ${y2}`;
+    return `<path d="${d}" stroke="${LINE}" stroke-width="12.400" fill="none" stroke-linecap="round"/>
+      <circle cx="${x1}" cy="${y1}" r="6.400" fill="${WHITE}"/>
+      <path d="${d}" stroke="${WHITE}" stroke-width="9" fill="none" stroke-linecap="round"/>
+      <ellipse cx="${px}" cy="${py}" rx="6.600" ry="6" fill="${WHITE}" ${S}/>` +
+      (pads ? `<ellipse cx="${px}" cy="${py + 1.600}" rx="2.600" ry="2" fill="#E9A6A0"/><circle cx="${px - 3}" cy="${py - 2.600}" r="1.200" fill="#E9A6A0"/><circle cx="${px}" cy="${py - 3.400}" r="1.200" fill="#E9A6A0"/><circle cx="${px + 3}" cy="${py - 2.600}" r="1.200" fill="#E9A6A0"/>`
+        : `<path d="M${px - 2} ${py + 2} v2.400 M${px + 2} ${py + 2} v2.400" stroke="${LINE}" stroke-width="1.200" stroke-linecap="round"/>`);
+  };
   const waving = mood === 'wave' || mood === 'point';
-  const pawUp = mood === 'think' ? limb(73, 90, 79, 76)
-    : waving ? limb(74, 88, 87, 70) + `<ellipse cx="89" cy="66" rx="7" ry="7.500" transform="rotate(30 89 66)" fill="${WHITE}" ${S}/><path d="M87 62 v4 M91 63 v4" stroke="${LINE}" stroke-width="1.200" stroke-linecap="round"/><path d="M95 56 l2 -4 M99 63 l5 -1" stroke="#FFC83D" stroke-width="2.600" stroke-linecap="round"/>`
+  const pawUp = mood === 'think' ? arm(70, 101, 81, 100, 78, 91, 77, 87, false)
+    : waving ? arm(68, 98, 85, 97, 87, 79, 88, 73, true) + `<path d="M95 63 l2.500 -4 M98 71 l5 -1" stroke="#FFC83D" stroke-width="2.600" stroke-linecap="round"/>`
       : '';
-  const rightLeg = pawUp
-    ? ''
-    : `<path d="M66 100 L66 114 C66 119 76 119 76 114 L76 100 Z" fill="${WHITE}" ${S}/><path d="M69 116 v3 M73 116 v3" stroke="${LINE}" stroke-width="1.2"/>`;
-  const CHEST = pawUp
-    ? 'M44 66 C36 78 38 96 42 104 L42 114 C42 119 53 119 53 114 L53 100 L67 100 L70 104 C80 98 84 78 76 66 Z'
-    : 'M44 66 C36 78 38 96 42 104 L42 114 C42 119 53 119 53 114 L53 100 L67 100 L67 114 C67 119 78 119 78 114 L78 104 C82 96 84 78 76 66 Z';
+  const BODY = 'M46 68 C40 76 36 92 37 106 C37 113 41 117 47 117 L73 117 C79 117 83 113 83 106 C84 92 80 76 74 68 Z';
+  const body = `
+    <ellipse cx="37" cy="104" rx="9.500" ry="12" fill="${WHITE}" ${S}/>
+    <ellipse cx="83" cy="104" rx="9.500" ry="12" fill="${WHITE}" ${S}/>
+    <ellipse cx="32" cy="116.500" rx="8" ry="4.200" fill="${WHITE}" ${S}/>
+    <ellipse cx="88" cy="116.500" rx="8" ry="4.200" fill="${WHITE}" ${S}/>
+    <path d="${BODY}" fill="${WHITE}" ${S}/>
+    <g clip-path="url(#${id}b)">
+      <path d="M45 66 C37 74 35 86 36 96 C42 93 48 84 51 72 Z" fill="${BROWN}"/>
+      <path d="M75 66 C83 74 85 86 84 96 C78 93 72 84 69 72 Z" fill="${BROWN}"/>
+    </g>
+    <path d="${BODY}" fill="none" ${S}/>
+    ${leg(48)}
+    ${pawUp ? '' : leg(63)}`;
   const tail = mood === 'sleep'
     ? `<path d="M86 108 C98 112 106 106 108 98" stroke="${LINE}" stroke-width="7.6" fill="none" stroke-linecap="round"/>
        <path d="M86 108 C98 112 106 106 108 98" stroke="${WHITE}" stroke-width="4.8" fill="none" stroke-linecap="round"/>
@@ -91,20 +109,10 @@ export function archie(mood = 'happy', cls = '', outfit = OUTFIT) {
       : '';
   const HEAD = 'M60 13 C44 13 34 24 34 38 C34 48 39 54 43 60 C45 70 50 80 60 80 C70 80 75 70 77 60 C81 54 86 48 86 38 C86 24 76 13 60 13 Z';
   return `<svg class="owl archie owl-${mood} ${cls}" viewBox="0 0 120 124" role="img" aria-label="Archie" focusable="false">
-  <defs><clipPath id="${id}"><path d="${HEAD}"/></clipPath></defs>
+  <defs><clipPath id="${id}"><path d="${HEAD}"/></clipPath><clipPath id="${id}b"><path d="${BODY}"/></clipPath></defs>
   <g class="owl-body-g">
     ${tail}
-    <!-- haunches -->
-    <path d="M44 88 C32 90 28 104 32 116 L50 118 L52 94 Z" fill="${WHITE}" ${S}/>
-    <path d="M76 88 C88 90 92 104 88 116 L70 118 L68 94 Z" fill="${WHITE}" ${S}/>
-    <path d="M34 117 h13 M73 117 h13" stroke="${LINE}" stroke-width="1.2"/>
-    <!-- compact chest + front legs -->
-    <path d="${CHEST}" fill="${WHITE}" ${S}/>
-    ${rightLeg}
-    <path d="M45 116 v3 M50 116 v3" stroke="${LINE}" stroke-width="1.2"/>
-    <!-- brown shoulder/saddle patches -->
-    <path d="M45 68 C38 74 36 84 37 92 C42 90 47 82 50 72 Z" fill="${BROWN}"/>
-    <path d="M75 68 C82 74 84 84 83 92 C78 90 73 82 70 72 Z" fill="${BROWN}"/>
+    ${body}
     <!-- harness -->
     <path d="M42 80 Q60 92 78 80 L78 86 Q60 98 42 86 Z" fill="${NAVY}" stroke="${LINE}" stroke-width="1.3" stroke-linejoin="round"/>
     <path d="M60 92 L60 106" stroke="${NAVY}" stroke-width="3.5" stroke-linecap="round"/>

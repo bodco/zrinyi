@@ -1,6 +1,6 @@
 // Simple offline support. Network-first for everything (so updates always win),
 // cache as fallback when offline. Bump VERSION when changing the shell.
-const VERSION = 'zrinyi-v8';
+const VERSION = 'zrinyi-v9';
 const SHELL = ['./', 'index.html', 'css/app.css', 'js/app.js', 'js/i18n.js', 'js/store.js', 'js/logic.js', 'js/rewards.js', 'js/mascot.js', 'img/icon.svg', 'manifest.webmanifest'];
 
 self.addEventListener('install', (e) => {

@@ -5,8 +5,8 @@ import { dayKey, dayDiff, addDays, rankOf, FREEZE_MAX } from './logic.js';
 export const GOALS = [30, 50, 80];
 export const defaultGoal = (g) => (+g <= 3 ? 30 : 50);
 export const BONES = {
-  correct: 2, // every correct answer
-  unaided: 1, // extra for a correct answer without hints
+  correct: 4, // every correct answer (as in the real contest)
+  wrong: 1, // taken away for a wrong answer (as in the real contest); skipped = 0
   fixSelf: 3, // review: fixed by yourself
   fixHint: 1, // review: fixed with hints
   done: { quick: 5, mistakes: 5, challenge: 8, full: 15, mock: 20, topic: 5 }
@@ -106,23 +106,25 @@ export function addBones(gr, n, today = dayKey(), opts = {}) {
   return { n, chest, goal: rw.goal, dayBefore: before.day, dayAfter: after.day, goalHit, levelBefore: before.level, levelUp, earnedBefore: before.earned, earnedAfter: rw.earned };
 }
 
-// Bones for a finished session record (never negative; wrong answers simply give 0)
+// Bones for a finished session record follow the real Zrínyi scoring:
+// +4 for a correct answer, -1 for a wrong one, 0 for a skipped one.
+// In the mock contest everybody also starts with as many points as there are problems,
+// so the bones equal the Zrínyi score. Never negative.
 export function sessionBones(rec) {
   const items = rec.items || [];
   const correct = items.filter((x) => x.ok === true).length;
+  const wrong = items.filter((x) => x.ok === false).length;
   const unaided = items.filter((x) => x.ok === true && !x.h).length;
-  const answered = items.filter((x) => x.ok !== null).length;
-  const parts = { correct: correct * BONES.correct, unaided: unaided * BONES.unaided, done: 0 };
-  // the completion bonus needs a real try: at least half of the problems answered
-  if (items.length && answered * 2 >= items.length) parts.done = BONES.done[rec.mode] || 5;
-  return { total: parts.correct + parts.unaided + parts.done, parts, correct, unaided };
+  const parts = { correct: correct * BONES.correct, wrong: -wrong * BONES.wrong, start: rec.mode === 'mock' ? items.length : 0 };
+  const total = Math.max(0, parts.correct + parts.wrong + parts.start);
+  return { total, parts, correct, wrong, unaided };
 }
 
 export function awardSession(gr, rec, streakRes = {}, today = dayKey()) {
   const b = sessionBones(rec);
   rec.bones = b.total;
   const res = addBones(gr, b.total, today);
-  return Object.assign(res, { parts: b.parts, correct: b.correct, unaided: b.unaided, freezeUsed: streakRes.freezeUsed || 0, freezeEarned: streakRes.freezeEarned || 0 });
+  return Object.assign(res, { parts: b.parts, correct: b.correct, wrong: b.wrong, unaided: b.unaided, freezeUsed: streakRes.freezeUsed || 0, freezeEarned: streakRes.freezeEarned || 0 });
 }
 
 // Review: a mistake fixed during the guided review. Each problem of a session pays once (item.rb flag).

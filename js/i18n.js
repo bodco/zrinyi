@@ -79,6 +79,8 @@ export const STR = {
     weekdays: ['H', 'K', 'Sze', 'Cs', 'P', 'Szo', 'V'],
     partCorrect: (n) => `${n} helyes`,
     partUnaided: (n) => `${n} tipp nélkül`,
+    partWrong: (n) => `${n} rossz`,
+    partStart: 'induló pontok',
     partDone: 'befejezett kör',
     levelUpTitle: 'Új szint!',
     levelUpText: (n, name) => `Archie elérte a ${n}. szintet: ${name}!`,
@@ -373,6 +375,8 @@ export const STR = {
     weekdays: ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Нд'],
     partCorrect: (n) => `${n} правильно`,
     partUnaided: (n) => `${n} без підказок`,
+    partWrong: (n) => `${n} неправильно`,
+    partStart: 'стартові бали',
     partDone: 'завершене тренування',
     levelUpTitle: 'Новий рівень!',
     levelUpText: (n, name) => `Арчі досяг рівня ${n}: ${name}!`,
@@ -640,7 +644,7 @@ export const PARENTS = {
     <li><b>Automatikus tippek és szint:</b> ha a gyerek egy ideig nem válaszol, a következő tipp magától kinyílik; a várakozás a feladat nehézségétől és az osztálytól függ, és tippről tippre nő (a próbaversenyen soha). Ez, valamint a gyakorlás szintje ("Mint a versenyen" vagy "Könnyebb") az osztály kezdőoldalán állítható.</li>
     <li><b>Archie:</b> a kis Jack Russell terrier végig a gyerek mellett van, bátorít, és gondolkodik vele. Gyakorláskor nem árulja el, jó-e a válasz, az eredmény a kör végén jön.</li>
     <li><b>Kihívások:</b> ha a kör könnyűnek tűnik, a nehezebb versenyfeladatokból is lehet gyakorolni (időkorlát nélkül). Ezek nem kerülnek a többi körbe.</li>
-    <li><b>Csontok, napi cél, sorozat, szekrény:</b> Archie csontokat gyűjt: minden helyes válaszért, a tipp nélküli megoldásért, a befejezett körért és a magától kijavított hibáért. Rossz válaszért soha nem von le semmit. A napi cél (30, 50 vagy 80 csont) a Haladásom oldalon állítható. A sorozat azt számolja, hány nap egymás után gyakorolt a gyerek; ha egy nap kimarad, "Archie takarója" megvédi (7 nap után ajándékba jár, vagy csontért vehető). Ha egy héten 5 napon gyakorol, kinyílik a heti láda. A csontokból Archie-nak ruhát vehet a szekrényben, ez csak játék, semmilyen előnyt nem ad. Nincs időzített értesítés, nincs sürgetés: minden csak az oldalon belül látszik.</li>
+    <li><b>Csontok, napi cél, sorozat, szekrény:</b> Archie csontjai pontosan úgy számolódnak, mint a verseny pontjai: helyes válasz +4, rossz válasz -1, kihagyott 0; a próbaversenyen ráadásul mindenki annyi csonttal indul, ahány feladat van, így a csontok száma megegyezik a Zrínyi-pontszámmal. A javításkor magától kijavított hibáért kis jutalom jár. A napi cél (30, 50 vagy 80 csont) a Haladásom oldalon állítható. A sorozat azt számolja, hány nap egymás után gyakorolt a gyerek; ha egy nap kimarad, "Archie takarója" megvédi (7 nap után ajándékba jár, vagy csontért vehető). Ha egy héten 5 napon gyakorol, kinyílik a heti láda. A csontokból Archie-nak ruhát vehet a szekrényben, ez csak játék, semmilyen előnyt nem ad. Nincs időzített értesítés, nincs sürgetés: minden csak az oldalon belül látszik.</li>
     <li>Tipp: 10-15 perc naponta többet ér, mint egy hosszú hétvégi alkalom. Üljön le mellé, és kérje meg, hogy hangosan gondolkodjon!</li>
   </ul>
   <h2>Adatok</h2>
@@ -674,7 +678,7 @@ export const PARENTS = {
     <li><b>Автоматичні підказки й рівень:</b> якщо дитина якийсь час не відповідає, наступна підказка відкривається сама; час очікування залежить від складності задачі й класу та зростає від підказки до підказки (у пробному конкурсі ніколи). Це, а також рівень тренування ("Як на конкурсі" чи "Легше"), налаштовується на головній сторінці класу.</li>
     <li><b>Арчі:</b> маленький джек-рассел-терʼєр увесь час поруч із дитиною, підбадьорює і думає разом із нею. Під час тренування він не підказує, чи правильна відповідь, результат буде наприкінці кола.</li>
     <li><b>Виклики:</b> якщо коло здається легким, можна потренуватися на складніших конкурсних задачах (без таймера). Вони не потрапляють в інші кола.</li>
-    <li><b>Кісточки, мета дня, серія, шафа:</b> Арчі збирає кісточки: за кожну правильну відповідь, за розвʼязок без підказок, за завершене тренування і за помилку, виправлену самостійно. За неправильну відповідь нічого не забирається. Мету дня (30, 50 або 80 кісточок) можна змінити на сторінці "Мій прогрес". Серія рахує, скільки днів поспіль дитина тренується; якщо день пропущено, "ковдрочка Арчі" зберігає серію (дається в подарунок за 7 днів поспіль або купується за кісточки). Якщо за тиждень є 5 днів тренувань, відкривається скриня тижня. За кісточки в шафі можна купити Арчі одяг, це лише гра і жодних переваг не дає. Немає нагадувань за таймером і поспіху: усе видно лише всередині сайту.</li>
+    <li><b>Кісточки, мета дня, серія, шафа:</b> Кісточки рахуються точно як бали на конкурсі: правильна відповідь +4, неправильна -1, пропущена 0; у пробному конкурсі кожен ще й стартує з такої кількості кісточок, скільки задач, тож кісточки дорівнюють балам Zrínyi. За помилку, самостійно виправлену під час розбору, є невелика нагорода. Мету дня (30, 50 або 80 кісточок) можна змінити на сторінці "Мій прогрес". Серія рахує, скільки днів поспіль дитина тренується; якщо день пропущено, "ковдрочка Арчі" зберігає серію (дається в подарунок за 7 днів поспіль або купується за кісточки). Якщо за тиждень є 5 днів тренувань, відкривається скриня тижня. За кісточки в шафі можна купити Арчі одяг, це лише гра і жодних переваг не дає. Немає нагадувань за таймером і поспіху: усе видно лише всередині сайту.</li>
     <li>Порада: 10-15 хвилин щодня дають більше, ніж одне довге заняття у вихідні. Сядьте поруч і попросіть дитину міркувати вголос!</li>
   </ul>
   <h2>Дані</h2>

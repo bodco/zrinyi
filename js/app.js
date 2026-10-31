@@ -595,8 +595,8 @@ function rewardBlock(rec) {
   const p = fx.parts || {};
   const chips = [
     p.correct ? `<span class="pc">✓ ${esc(t('partCorrect', fx.correct))} <b>+${p.correct}</b></span>` : '',
-    p.unaided ? `<span class="pc">💡 ${esc(t('partUnaided', fx.unaided))} <b>+${p.unaided}</b></span>` : '',
-    p.done ? `<span class="pc">🏁 ${esc(t('partDone'))} <b>+${p.done}</b></span>` : ''
+    p.wrong ? `<span class="pc">✗ ${esc(t('partWrong', fx.wrong))} <b>${p.wrong}</b></span>` : '',
+    p.start ? `<span class="pc">🏁 ${esc(t('partStart'))} <b>+${p.start}</b></span>` : ''
   ].join('');
   const lvNow = L.rankOf(fx.earnedAfter);
   return `<section class="reward" aria-label="${t('bonesTitle')}">

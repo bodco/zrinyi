@@ -104,6 +104,44 @@ export const STR = {
       'Remek kitartás!',
       'Figyelmesen olvasd el a következőt is!'
     ],
+    // hints and Archie
+    hint: 'Segítség',
+    hintNone: 'Nincs több tipp',
+    hintLevel: (i, n) => `${i}/${n}`,
+    hintLevelAria: (i, n) => `${i}. tipp ${n}-ből`,
+    hintMark: (n) => `${n} tipp`,
+    unaided: 'tipp nélkül megoldva',
+    rvTogether: 'Próbáljuk meg együtt, lépésről lépésre! Nyiss meg egy tippet, és gondold végig.',
+    rvTogether2: 'Jól csinálod! Nyiss meg még egy tippet, ha kell.',
+    coachStart: 'Szia! Együtt oldjuk meg őket. Ha elakadsz, kérj tippet!',
+    coachHint: ['Nézzük meg együtt!', 'Már közelebb vagy, gondold végig!', 'Szép lassan kiderül, te is látod!', 'Ez az utolsó tipp, a többit már te tudod!'],
+    coachChallenge: 'Ezek nehéz feladatok, nem baj, ha nem megy elsőre. Kérj tippet!',
+    coachMock: 'Sok sikert, dolgozz nyugodtan!',
+    homeSayNew: 'Szia! Én Archie vagyok. Válassz egy játékot, és kezdjük!',
+    homeSayMist: (n) => `Van ${n} javítanivaló feladat. Javítsuk ki együtt, lépésről lépésre!`,
+    homeSayStreak: (n) => `${n} napja gyakorolsz egymás után. Fantasztikus vagy!`,
+    homeSayBack: 'Örülök, hogy újra itt vagy! Mit gyakorolunk ma?',
+    resSayHints: (n) => `${n} feladatnál kértél tippet. Ez teljesen rendben van, így tanul az ember!`,
+    resSayMist: 'A hibákból tanulunk a legtöbbet. Nézzük át együtt őket!',
+    resSayPerfect: 'Egyetlen hiba nélkül! Nagyon büszke vagyok rád!',
+    resChallenge: 'Bátor próbálkozás! Ezek a feladatok tényleg nehezek.',
+    rvDoneSay: 'Ügyes voltál, hogy végigcsináltad!',
+    parentsSay: 'Szülőknek: itt mindent elmondok, hogyan segítek a gyereknek.',
+    emptySay: 'Hmm, itt még csendes minden...',
+    challengeTag: 'Kihívás: nehéz feladatok',
+    hintAssisted: 'tippel oldottad meg',
+    archieSays: 'Archie',
+    modeChallenge: 'Kihívás',
+    levelTitle: 'Gyakorlás szintje',
+    level_contest: 'Mint a versenyen',
+    level_easy: 'Könnyebb',
+    levelDesc_contest: 'Megyei forduló szintje: a legnehezebb feladatok is bekerülnek.',
+    levelDesc_easy: 'Több könnyű feladat, a legnehezebbek kimaradnak. Jó kezdésnek.',
+    modeChallengeSub: (n) => `Nehéz feladatok (${n}), tippekkel, nincs időkorlát`,
+    soon: 'Hamarosan',
+    progressSay: (n) => n ? 'Nézzük, hogyan haladsz! Büszke vagyok rád.' : 'Itt fogod látni a haladásodat. Kezdjünk egy körrel!',
+    fixedWithHintsLine: (z) => `${z} feladatot tippek segítségével javítottál.`,
+    fixedHintsTitle: 'Tippekkel javítottad!',
     // results
     resultsTitle: 'Kész vagy!',
     resultsGreat: 'Fantasztikus!',
@@ -155,6 +193,8 @@ export const STR = {
     finishReview: 'Befejezem',
     reviewDoneTitle: 'Végeztél a javítással!',
     reviewDoneText: (x, y) => `${y} feladatból ${x} sikerült magadtól!`,
+    reviewDoneSelf: 'magadtól',
+    reviewDoneHints: 'tippekkel',
     reviewDoneZero: 'Minden megoldást végignéztél. Legközelebb már menni fog!',
     disabledChoice: 'ezt már választottad',
     // progress
@@ -181,7 +221,7 @@ export const STR = {
     exportOk: 'Elmentve!',
     transferNote: 'Más készülékre úgy viheted át, hogy itt elmented, ott pedig betöltöd a fájlt.',
     sessions: 'kör',
-    modeNames: { quick: 'Gyors gyakorlás', topic: 'Téma', mock: 'Próbaverseny', mistakes: 'Hibák javítása' },
+    modeNames: { quick: 'Gyors gyakorlás', topic: 'Téma', mock: 'Próbaverseny', mistakes: 'Hibák javítása', challenge: 'Kihívás' },
     badgeDefs: {
       first: ['Első lépés', 'Befejezted az első kört'],
       streak3: ['Három nap', '3 napig egymás után gyakoroltál'],
@@ -291,6 +331,44 @@ export const STR = {
       'Яка наполегливість!',
       'Уважно прочитай і наступну!'
     ],
+    // hints and Archie
+    hint: 'Підказка',
+    hintNone: 'Більше підказок немає',
+    hintLevel: (i, n) => `${i}/${n}`,
+    hintLevelAria: (i, n) => `Підказка ${i} з ${n}`,
+    hintMark: (n) => `${n} ${ukPl(n, 'підказка', 'підказки', 'підказок')}`,
+    unaided: 'розвʼязано без підказок',
+    rvTogether: 'Спробуймо разом, крок за кроком! Відкрий підказку й подумай.',
+    rvTogether2: 'Добре виходить! Відкрий ще одну підказку, якщо треба.',
+    coachStart: 'Привіт! Розвʼяжемо разом. Якщо застрягнеш, попроси підказку!',
+    coachHint: ['Подивімось разом!', 'Ти вже ближче, подумай!', 'Потроху все стає ясно, ти теж бачиш!', 'Це остання підказка, решту ти вже знаєш!'],
+    coachChallenge: 'Ці задачі складні, нічого страшного, якщо не вийде з першого разу. Проси підказку!',
+    coachMock: 'Успіхів, працюй спокійно!',
+    homeSayNew: 'Привіт! Я Арчі. Обери гру, і почнімо!',
+    homeSayMist: (n) => `Є ${n} ${ukPl(n, 'задача', 'задачі', 'задач')} для виправлення. Виправимо разом, крок за кроком!`,
+    homeSayStreak: (n) => `Ти тренуєшся ${n} ${ukPl(n, 'день', 'дні', 'днів')} поспіль. Ти молодець!`,
+    homeSayBack: 'Радий, що ти знову тут! Що тренуємо сьогодні?',
+    resSayHints: (n) => `Підказки знадобились у ${n} ${n % 10 === 1 && n % 100 !== 11 ? 'задачі' : 'задачах'}. Це цілком нормально, так вчаться!`,
+    resSayMist: 'На помилках вчимося найбільше. Розберімо їх разом!',
+    resSayPerfect: 'Жодної помилки! Я дуже пишаюся тобою!',
+    resChallenge: 'Смілива спроба! Ці задачі справді складні.',
+    rvDoneSay: 'Яка гарна робота, ми все розібрали разом!',
+    parentsSay: 'Для батьків: тут я розповідаю, як допомагаю дитині.',
+    emptySay: 'Хм, тут поки тихо...',
+    challengeTag: 'Виклик: складні задачі',
+    hintAssisted: 'розвʼязано з підказкою',
+    archieSays: 'Арчі',
+    modeChallenge: 'Виклик',
+    levelTitle: 'Рівень тренування',
+    level_contest: 'Як на конкурсі',
+    level_easy: 'Легше',
+    levelDesc_contest: 'Рівень обласного туру: потрапляють і найскладніші задачі.',
+    levelDesc_easy: 'Більше легких задач, найскладніші пропущені. Добре для початку.',
+    modeChallengeSub: (n) => `Складні задачі (${n}), з підказками, без таймера`,
+    soon: 'Незабаром',
+    progressSay: (n) => n ? 'Подивімось, як ти просуваєшся! Я пишаюся тобою.' : 'Тут буде видно твій прогрес. Почнімо з першого кола!',
+    fixedWithHintsLine: (z) => `${z} ${ukPl(z, 'задачу', 'задачі', 'задач')} виправлено з підказками.`,
+    fixedHintsTitle: 'Виправлено з підказками!',
     resultsTitle: 'Готово!',
     resultsGreat: 'Неймовірно!',
     resultsGood: 'Гарна робота!',
@@ -340,6 +418,8 @@ export const STR = {
     finishReview: 'Завершити',
     reviewDoneTitle: 'Помилки розібрано!',
     reviewDoneText: (x, y) => `${x} з ${y} задач ти виправив сам!`,
+    reviewDoneSelf: 'сам',
+    reviewDoneHints: 'з підказками',
     reviewDoneZero: 'Усі розвʼязки переглянуто. Наступного разу вийде!',
     disabledChoice: 'це вже обрано',
     progressTitle: 'Мій прогрес',
@@ -365,7 +445,7 @@ export const STR = {
     exportOk: 'Збережено!',
     transferNote: 'Щоб перенести прогрес на інший пристрій, збережи файл тут і завантаж його там.',
     sessions: 'тренувань',
-    modeNames: { quick: 'Швидке тренування', topic: 'Тема', mock: 'Пробний конкурс', mistakes: 'Робота над помилками' },
+    modeNames: { quick: 'Швидке тренування', topic: 'Тема', mock: 'Пробний конкурс', mistakes: 'Робота над помилками', challenge: 'Виклик' },
     badgeDefs: {
       first: ['Перший крок', 'Перше завершене тренування'],
       streak3: ['Три дні', '3 дні тренувань поспіль'],
@@ -424,6 +504,9 @@ export const PARENTS = {
     <li><b>Témák:</b> ha egy terület nehezebben megy, 10 feladat csak abból.</li>
     <li><b>Próbaverseny:</b> 25 (7-8. osztályban 30) feladat könnyűtől a nehézig, valódi időkorláttal és pontozással. Megállítható.</li>
     <li><b>Hibák javítása:</b> a legfontosabb rész. Minden hibánál előbb elmagyarázzuk, miért választhatta a gyerek azt a választ, adunk egy rávezető kérdést, és még egyszer megpróbálhatja. Csak ezután jön a lépésenkénti megoldás.</li>
+    <li><b>Segítség (tippek):</b> gyakorláskor és javításkor minden feladatnál kérhet a gyerek tippet. A tippek szintenként nyílnak: az első csak egy apró terelés, az utolsó már részletes, de a választ soha nem árulja el. A próbaversenyen nincs tipp. Ha helyesen válaszolt tipp után, az eredmény helyes, de 💡 jelzi, hogy segítséggel ment. A javításnál a "magadtól" csak az, amit tippek nélkül sikerült kijavítani.</li>
+    <li><b>Archie:</b> a kis Jack Russell terrier végig a gyerek mellett van, bátorít, és gondolkodik vele. Gyakorláskor nem árulja el, jó-e a válasz, az eredmény a kör végén jön.</li>
+    <li><b>Kihívások:</b> ha a kör könnyűnek tűnik, a nehezebb versenyfeladatokból is lehet gyakorolni (időkorlát nélkül). Ezek nem kerülnek a többi körbe.</li>
     <li>Tipp: 10-15 perc naponta többet ér, mint egy hosszú hétvégi alkalom. Üljön le mellé, és kérje meg, hogy hangosan gondolkodjon!</li>
   </ul>
   <h2>Adatok</h2>
@@ -453,6 +536,9 @@ export const PARENTS = {
     <li><b>Теми:</b> якщо якась тема дається важче, 10 задач лише з неї.</li>
     <li><b>Пробний конкурс:</b> 25 (у 7-8 класі 30) задач від легких до складних, зі справжнім часом і балами. Можна поставити на паузу.</li>
     <li><b>Робота над помилками:</b> найважливіша частина. Для кожної помилки спершу пояснюємо, чому дитина могла обрати цю відповідь, даємо навідне питання і ще одну спробу. Лише потім показуємо розвʼязок крок за кроком.</li>
+    <li><b>Підказки:</b> під час тренування і роботи над помилками до кожної задачі можна попросити підказку. Підказки відкриваються рівнями: перша лише легенько спрямовує, остання вже детальна, але відповідь не розкриває ніколи. У пробному конкурсі підказок немає. Якщо дитина відповіла правильно після підказки, результат зараховується, а значок 💡 показує, що вона була з допомогою. У роботі над помилками "сам" означає лише те, що виправлено без підказок.</li>
+    <li><b>Арчі:</b> маленький джек-рассел-терʼєр увесь час поруч із дитиною, підбадьорює і думає разом із нею. Під час тренування він не підказує, чи правильна відповідь, результат буде наприкінці кола.</li>
+    <li><b>Виклики:</b> якщо коло здається легким, можна потренуватися на складніших конкурсних задачах (без таймера). Вони не потрапляють в інші кола.</li>
     <li>Порада: 10-15 хвилин щодня дають більше, ніж одне довге заняття у вихідні. Сядьте поруч і попросіть дитину міркувати вголос!</li>
   </ul>
   <h2>Дані</h2>

@@ -22,8 +22,12 @@ const S = {
   lastScreen: '',
   debug: new URLSearchParams(location.search).has('debug'),
   tick: null,
-  lastTick: 0
+  lastTick: 0,
+  cheerIdx: -1,
+  cheerText: '',
+  hintLock: 0
 };
+const regOf = (g) => L.regular(S.data[g]);
 
 /* ---------------- helpers ---------------- */
 const t = (k, ...a) => { const v = STR[S.lang][k]; return typeof v === 'function' ? v(...a) : v; };
@@ -98,6 +102,38 @@ function bubble(html, mood = 'happy', cls = '') {
   return `<div class="say ${cls}">${owl(mood, 'owl-sm')}<div class="bubble">${html}</div></div>`;
 }
 
+// stack of opened hint levels (earlier levels stay visible), numbered "1/4", "2/4" ...
+function hintStack(list, opened) {
+  if (!opened) return '';
+  const n = list.length;
+  return `<div class="hstack" role="list">${list.slice(0, opened).map((h, i) => `<div class="hb" role="listitem" ${i === opened - 1 ? 'data-focus' : ''}>
+    <span class="hb-ic" aria-hidden="true">${owl(i === opened - 1 ? 'think' : 'happy', 'owl-xs')}</span>
+    <div class="hb-t"><small aria-label="${esc(t('hintLevelAria', i + 1, n))}"><span class="hnum">${t('hintLevel', i + 1, n)}</span></small><p>${esc(h)}</p></div></div>`).join('')}</div>`;
+}
+function hintButton(total, opened, act) {
+  if (!total) return '';
+  if (opened >= total) return `<button type="button" class="hintbtn" disabled>💡 ${t('hintNone')} <span class="hcount">${opened}/${total}</span></button>`;
+  return `<button type="button" class="hintbtn" data-act="${act}">💡 ${t('hint')} <span class="hcount">${opened}/${total}</span></button>`;
+}
+// what Archie says and how he looks in the quiz header
+function coachFor(s, opened, total) {
+  const mock = s.mode === 'mock';
+  if (mock) return { mood: s.idx === 0 ? 'wave' : 'happy', text: s.idx === 0 ? t('coachMock') : '' };
+  if (opened > 0) {
+    const arr = t('coachHint');
+    return { mood: 'think', text: arr[Math.min(opened >= total ? 3 : opened - 1, arr.length - 1)] };
+  }
+  if (s.idx === 0) return { mood: 'wave', text: s.mode === 'challenge' ? t('coachChallenge') : t('coachStart') };
+  if (S.cheerIdx === s.idx && S.cheerText) return { mood: 'cheer', text: S.cheerText };
+  const arr = t('cheer');
+  return { mood: s.idx % 2 ? 'happy' : 'point', text: arr[(s.idx * 3 + s.ids.length) % arr.length] };
+}
+function coachHTML(c, s) {
+  return `<div class="coach ${s.mode === 'challenge' ? 'hard' : ''}" aria-live="polite">
+    <span class="coach-ic" aria-hidden="true">${owl(c.mood, 'owl-coach')}</span>
+    ${c.text ? `<div class="coach-b"><span>${esc(c.text)}</span></div>` : ''}</div>`;
+}
+
 function figureHTML(p) {
   if (!p.figure) return '';
   const m = /<svg[^>]*\swidth="([\d.]+)"/.exec(p.figure);
@@ -105,9 +141,9 @@ function figureHTML(p) {
   return `<div class="fig" style="--fw:${w}px">${p.figure}</div>`;
 }
 
-function problemHTML(p, num) {
+function problemHTML(p, num, extra = '') {
   return `<div class="pcard" data-pid="${esc(p.id)}">
-    <div class="pmeta"><span class="tchip">${topicIcon(p.topic)} ${esc(topicName(p.topic))}</span>${num ? `<span class="pnum">${num}</span>` : ''}</div>
+    <div class="pmeta"><span class="tchip">${topicIcon(p.topic)} ${esc(topicName(p.topic))}</span>${extra}${num ? `<span class="pnum">${num}</span>` : ''}</div>
     <p class="qtext">${esc(tx(p.q))}</p>
     ${figureHTML(p)}
   </div>`;
@@ -204,17 +240,18 @@ function screenStart() {
     if (gr && gr.sessions && gr.sessions.length) {
       const sum = L.gradeSummary(gr);
       const last = sum.last;
-      info = `<span class="tile-stats">${starsRow(L.starsOf(last.acc), 'sm')}<span>${t('lastScore')}: ${last.mode === 'mock' ? `${last.score} ${t('points')}` : pct(last.acc)}</span></span>`;
+      if (last) info = `<span class="tile-stats">${starsRow(L.starsOf(last.acc), 'sm')}<span>${t('lastScore')}: ${last.mode === 'mock' ? `${last.score} ${t('points')}` : pct(last.acc)}</span></span>`;
     }
     const nick = gr && gr.nickname ? `<span class="tile-nick">${esc(gr.nickname)}</span>` : '';
-    return `<button class="gtile gt${g}" data-act="nav" data-to="#/g/${g}">
-      <span class="gnum">${g}.</span><span class="glabel">${t('grade')}</span>${nick}${info}
+    const soon = !L.isReady(g);
+    return `<button class="gtile gt${g} ${soon ? 'soon' : ''}" data-act="nav" data-to="#/g/${g}">
+      <span class="gnum">${g}.</span><span class="glabel">${t('grade')}</span>${soon ? `<span class="soon-pill">${t('soon')}</span>` : `${nick}${info}`}
     </button>`;
   }).join('');
   return `${topBar({})}
   <main class="wrap start">
     <section class="hero">
-      ${owl('happy', 'owl-hero bob')}
+      ${owl('wave', 'owl-hero bob')}
       <div><h1 class="h-big">${t('chooseGrade')}</h1><p class="lead">${t('tagline')}</p></div>
     </section>
     <nav class="gtiles" aria-label="${t('chooseGrade')}">${tiles}
@@ -225,7 +262,7 @@ function screenStart() {
 
 function screenParents() {
   return `${topBar({ back: '#/', title: t('parentsTitle') })}
-  <main class="wrap prose">${owl('think', 'owl-md float-r')}${PARENTS[S.lang]}
+  <main class="wrap prose">${bubble(esc(t('parentsSay')), 'point', 'parents-say')}${PARENTS[S.lang]}
     <p class="center"><button class="btn primary" data-act="nav" data-to="#/">${t('chooseGrade')}</button></p>
   </main>`;
 }
@@ -249,16 +286,18 @@ function screenHome(g) {
   const gr = store.grade(g);
   const sum = L.gradeSummary(gr);
   const mist = L.openMistakes(all, gr).length;
+  const nch = L.challengeCount(all);
+  const say = mist ? t('homeSayMist', mist) : sum.streak >= 2 ? t('homeSayStreak', sum.streak) : sum.sessions ? t('homeSayBack') : t('homeSayNew');
   const act = gr.active && gr.active.ids.every((id) => S.byId[id]) ? gr.active : null;
   const done = act ? act.answers.filter((a, i) => i < act.idx || a).length : 0;
   const mm = L.mockMinutes(g);
   return `${topBar({ back: '#/', title: t('gradeN', g) })}
   <main class="wrap home">
     <section class="greet">
-      ${owl(sum.sessions ? 'cheer' : 'happy', 'owl-lg bob')}
+      ${owl(mist ? 'point' : sum.streak >= 2 ? 'cheer' : 'wave', 'owl-lg bob')}
       <div class="greet-txt">
         <h2 class="h-big">${esc(t('hello', gr.nickname))}</h2>
-        <p>${t('helloSub')}</p>
+        <p class="greet-say">${esc(say)}</p>
         <button class="link" data-act="edit-name">✎ ${t('editName')}</button>
       </div>
     </section>
@@ -267,14 +306,21 @@ function screenHome(g) {
       <div class="stat"><b>${sum.acc == null ? '-' : pct(sum.acc)}</b><span>${t('statAccuracy')}</span></div>
       <div class="stat"><b>${sum.streak}${sum.streak ? ' 🔥' : ''}</b><span>${t('statStreak')}</span></div>
     </section>
+    ${sum.sessions ? `<p class="unaided">💡 <b>${sum.unaided}</b> ${t('unaided')}</p>` : ''}
     ${act ? `<section class="resume">
       <div><b>${t('resumeTitle')}</b><span>${esc(t('modeNames')[act.mode])}${act.topic ? `: ${esc(topicName(act.topic))}` : ''}. ${t('resumeText', done, act.ids.length)}</span></div>
       <div class="row"><button class="btn ghost sm" data-act="discard">${t('discard')}</button><button class="btn primary sm" data-act="resume">${t('resume')}</button></div>
     </section>` : ''}
+    <section class="levelsw" aria-label="${t('levelTitle')}">
+      <span class="lv-t">${t('levelTitle')}</span>
+      <div class="seg" role="group">${L.LEVELS.map((lv) => `<button type="button" data-act="level" data-lv="${lv}" aria-pressed="${L.levelOf(gr) === lv}">${t('level_' + lv)}</button>`).join('')}</div>
+      <small class="lv-d">${t('levelDesc_' + L.levelOf(gr))}</small>
+    </section>
     <section class="modes">
       <button class="mode m-quick" data-act="start" data-mode="quick"><span class="mi" aria-hidden="true">⚡</span><span class="mt"><b>${t('modeQuick')}</b><small>${t('modeQuickSub')}</small></span><span class="go" aria-hidden="true">›</span></button>
       <button class="mode m-topics" data-act="nav" data-to="#/g/${g}/topics"><span class="mi" aria-hidden="true">🧭</span><span class="mt"><b>${t('modeTopics')}</b><small>${t('modeTopicsSub')}</small></span></button>
-      <button class="mode m-mock" data-act="nav" data-to="#/g/${g}/mock"><span class="mi" aria-hidden="true">🏆</span><span class="mt"><b>${t('modeMock')}</b><small>${t('modeMockSub', Math.min(L.mockN(g), all.length), mm)}</small></span></button>
+      <button class="mode m-mock" data-act="nav" data-to="#/g/${g}/mock"><span class="mi" aria-hidden="true">🏆</span><span class="mt"><b>${t('modeMock')}</b><small>${t('modeMockSub', Math.min(L.mockN(g), regOf(g).length), mm)}</small></span></button>
+      ${nch ? `<button class="mode m-chal" data-act="start" data-mode="challenge"><span class="mi" aria-hidden="true">🚀</span><span class="mt"><b>${t('modeChallenge')}</b><small>${t('modeChallengeSub', nch)}</small></span></button>` : ''}
       <button class="mode m-mist" data-act="start" data-mode="mistakes" ${mist ? '' : 'disabled'}><span class="mi" aria-hidden="true">🔧</span><span class="mt"><b>${t('modeMistakes')}</b><small>${t('modeMistakesSub', mist)}</small></span>${mist ? `<span class="badge-n">${mist}</span>` : ''}</button>
       <button class="mode m-prog" data-act="nav" data-to="#/g/${g}/progress"><span class="mi" aria-hidden="true">📈</span><span class="mt"><b>${t('modeProgress')}</b><small>${t('modeProgressSub')}</small></span></button>
     </section>
@@ -284,7 +330,7 @@ function screenHome(g) {
 function screenTopics(g) {
   const all = S.data[g];
   const gr = store.grade(g);
-  const m = L.topicMastery(all, gr);
+  const m = L.topicMastery(L.regular(all), gr);
   const keys = Object.keys(TOPICS).filter((k) => m[k]);
   return `${topBar({ back: `#/g/${g}`, title: t('modeTopics') })}
   <main class="wrap">
@@ -303,7 +349,7 @@ function screenTopics(g) {
 
 function screenMockIntro(g) {
   const all = S.data[g];
-  const n = Math.min(L.mockN(g), all.length);
+  const n = Math.min(L.mockN(g), regOf(g).length);
   const mm = L.mockMinutes(g);
   return `${topBar({ back: `#/g/${g}`, title: t('mockIntroTitle') })}
   <main class="wrap mock-intro">
@@ -331,6 +377,8 @@ function activeSess() {
   return gr.active;
 }
 
+const hintList = (p) => L.hintList(p, S.lang);
+
 function screenQuiz(g) {
   const s = activeSess();
   const p = S.byId[s.ids[s.idx]];
@@ -357,14 +405,20 @@ function screenQuiz(g) {
          : `<button class="btn ${s.answers[s.idx] ? 'primary' : 'second'} grow" data-act="mock-next">${s.answers[s.idx] ? t('next') : t('skip')} ›</button>`}`
     : `<button class="btn second" data-act="skip">${t('skip')}</button>
        <button class="btn primary grow" data-act="done" ${S.sel ? '' : 'disabled'}>${t('done')} ✓</button>`;
+  if (!s.hints) s.hints = s.ids.map(() => 0);
+  const hl = hintList(p);
+  const opened = Math.min(s.hints[s.idx] || 0, hl.length);
+  const hintBlock = mock ? '' : `${hintStack(hl, opened)}${hintButton(hl.length, opened, 'hint')}`;
+  const coach = coachHTML(coachFor(s, opened, hl.length), s);
   const dbg = S.debug ? `<div class="debug"><button data-act="dbg-fill">DEBUG: auto-fill + finish</button>${mock ? '<button data-act="dbg-timeup">DEBUG: time up</button>' : ''}</div>` : '';
   return `<header class="top qbar">
     <button class="icon-btn" data-act="quit" aria-label="${t('quit')}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
     ${bar}
     ${langToggle()}
   </header>
-  <main class="wrap quiz ${mock ? 'is-mock' : ''}">
-    <div class="qcol">${problemHTML(p, `${t('question')} ${s.idx + 1}`)}</div>
+  <main class="wrap quiz ${mock ? 'is-mock' : ''} m-${s.mode}">
+    ${coach}
+    <div class="qcol">${problemHTML(p, `${t('question')} ${s.idx + 1}`)}${hintBlock}</div>
     <div class="acol">
       ${!mock && !S.sel ? `<p class="hintline">${t('pickAnswer')}</p>` : ''}
       ${opts}
@@ -388,25 +442,29 @@ function screenResults(g, id) {
   const prev = gr.sessions.slice(0, idx).filter((x) => x.mode === rec.mode && (rec.mode !== 'topic' || x.topic === rec.topic));
   const mock = rec.mode === 'mock';
   const stars = L.starsOf(rec.acc);
+  const chal = rec.mode === 'challenge';
   let cmp;
-  if (!prev.length) cmp = t('firstTime');
+  if (rec.mode === 'challenge') cmp = '';
+  else if (!prev.length) cmp = t('firstTime');
   else {
     const best = mock ? Math.max(...prev.map((x) => x.score)) : Math.max(...prev.map((x) => x.acc));
     const mine = mock ? rec.score : rec.acc;
     cmp = mine > best ? `🎉 ${t('newRecord')} <span class="muted">${t('prevBest', mock ? `${best} ${t('points')}` : pct(best))}</span>` : t('prevBest', mock ? `${best} ${t('points')}` : pct(best));
   }
-  const title = stars === 3 ? t('resultsGreat') : stars === 2 ? t('resultsGood') : stars === 1 ? t('resultsOk') : t('resultsLow');
+  const title = chal ? t('resChallenge').split('!')[0] + '!' : stars === 3 ? t('resultsGreat') : stars === 2 ? t('resultsGood') : stars === 1 ? t('resultsOk') : t('resultsLow');
   // per topic
   const tp = {};
   rec.items.forEach((it) => { const p = S.byId[it.id]; if (!p) return; const e = tp[p.topic] || (tp[p.topic] = { c: 0, n: 0 }); e.n++; if (it.ok) e.c++; });
   const toReview = rec.items.filter((x) => !x.ok).length;
+  const hintedN = rec.items.filter((x) => x.h).length;
+  const rsay = chal ? t('resChallenge') : stars === 3 && !toReview ? t('resSayPerfect') : hintedN ? t('resSayHints', hintedN) : toReview ? t('resSayMist') : '';
   const newB = S.newBadges && S.newBadges.sid === rec.id ? S.newBadges.ids : [];
   return `${topBar({ back: `#/g/${g}`, title: t('modeNames')[rec.mode] + (rec.topic ? `: ${topicName(rec.topic)}` : '') })}
   <main class="wrap results">
     <section class="rhero s${stars}">
-      ${owl(stars >= 2 ? 'cheer' : stars === 1 ? 'happy' : 'think', 'owl-lg pop')}
+      ${owl(stars >= 1 || chal ? 'cheer' : 'oops', 'owl-lg pop')}
       <h2 class="h-big">${title}</h2>
-      ${starsRow(stars, 'lg pop-stars')}
+      ${chal ? '' : starsRow(stars, 'lg pop-stars')}
       ${mock ? `<div class="bigscore"><b>${rec.score}</b><span>/ ${L.mockMax(rec.n)} ${t('points')}</span><small>${t('zrinyiScore')}</small></div>` : `<div class="bigscore"><b>${rec.correct}</b><span>/ ${rec.n}</span></div>`}
       <div class="rchips">
         <span class="rc ok">✓ ${rec.correct} ${t('correct')}</span>
@@ -414,8 +472,9 @@ function screenResults(g, id) {
         <span class="rc skip">⏭ ${rec.skipped} ${t('skipped')}</span>
       </div>
       <p class="rmeta">⏱ ${t('timeSpent')}: ${fmtDur(rec.timeSec)}</p>
-      <p class="rcmp">${cmp}</p>
+      ${cmp ? `<p class="rcmp">${cmp}</p>` : ''}
     </section>
+    ${rsay && !chal ? bubble(esc(rsay), toReview ? 'point' : 'cheer', 'rsay') : ''}
     ${newB.length ? `<section class="newbadges"><h3>${t('newBadge')}</h3>${newB.map((b) => `<div class="nb"><span>${BADGE_ICONS[b]}</span><b>${esc(t('badgeDefs')[b][0])}</b></div>`).join('')}</section>` : ''}
     <div class="cta-col">
       ${toReview ? `<button class="btn primary big" data-act="nav" data-to="#/g/${g}/review/${rec.id}">🔍 ${t('reviewMistakes')} (${toReview})</button>` : `<p class="perfect">${t('noMistakes')}</p>`}
@@ -432,7 +491,9 @@ function screenResults(g, id) {
         if (!p) return '';
         const st = it.ok ? 'ok' : it.ok === false ? 'bad' : 'skip';
         const ic = it.ok ? '✓' : it.ok === false ? '✗' : '⏭';
-        const head = `<span class="pst ${st}" aria-hidden="true">${ic}</span><span class="pn">${i + 1}.</span><span class="ptx">${topicIcon(p.topic)} ${esc(tx(p.q))}</span>`;
+        const hn = Math.max(it.h || 0, it.rh || 0);
+        const bulb = hn ? `<span class="hbulb" role="img" aria-label="${esc(t('hintMark', hn))}" title="${esc(t('hintMark', hn))}">💡 ${hn}</span>` : '';
+        const head = `<span class="pst ${st}" aria-hidden="true">${ic}</span><span class="pn">${i + 1}.</span><span class="ptx">${topicIcon(p.topic)} ${esc(tx(p.q))}</span>${bulb}`;
         if (it.ok) {
           return `<li><details><summary>${head}<span class="more">${t('showSolution')}</span></summary>
             <div class="pdet">${problemHTML(p)}${optionsHTML(p, { correct: p.answer, allDisabled: true })}
@@ -453,14 +514,14 @@ function initReview(g, sid, startAt) {
   const list = rec.items.map((it, i) => ({ ...it, n: i + 1 })).filter((x) => !x.ok && S.byId[x.id]);
   let i = 0;
   if (startAt != null) { const k = list.findIndex((x) => x.n === +startAt + 1); if (k >= 0) i = k; }
-  S.rv = { g, sid: rec.id, list, i, solvedSelf: 0, card: null, done: false };
+  S.rv = { g, sid: rec.id, list, i, solvedSelf: 0, solvedHints: 0, card: null, done: false };
   newCard();
   return S.rv;
 }
 function newCard() {
   const rv = S.rv;
   const it = rv.list[rv.i];
-  rv.card = { tried: it.a ? [it.a] : [], sel: null, status: 'trying', showSol: false, steps: 0, orig: it.a };
+  rv.card = { tried: it.a ? [it.a] : [], sel: null, status: 'trying', showSol: false, steps: 0, orig: it.a, hl: 0 };
 }
 
 function screenReview(g, sid, startAt) {
@@ -483,6 +544,15 @@ function screenReview(g, sid, startAt) {
   }
   // b. hint
   parts.push(`<div class="hintcard"><b>💡 ${t('hintTitle')}</b><p>${esc(tx(p.hint))}</p></div>`);
+  // hint ladder: stepwise tips, never the answer; the solution flow below stays as it was
+  const ladder = L.hintList(p, S.lang, false);
+  if (ladder.length && c.status === 'trying') {
+    if (c.hl < ladder.length) parts.push(bubble(esc(c.hl ? t('rvTogether2') : t('rvTogether')), c.hl ? 'think' : 'point', 'together'));
+    parts.push(hintStack(ladder, c.hl));
+    parts.push(hintButton(ladder.length, c.hl, 'rv-hint'));
+  } else if (ladder.length && c.hl) {
+    parts.push(hintStack(ladder, c.hl));
+  }
   // retries feedback
   const extraTries = c.tried.slice(c.orig ? 1 : 0);
   extraTries.forEach((l, k) => {
@@ -500,12 +570,12 @@ function screenReview(g, sid, startAt) {
   const tryTitle = c.status === 'trying' ? `<h3 class="trytitle">${c.tried.length ? t('tryAgain') : t('tryNow')} <small>${c.tried.length ? t('tryAgainSub') : ''}</small></h3>` : '';
   let celebrate = '';
   if (c.status === 'solved') {
-    celebrate = `<div class="celebrate" data-focus>${owl('cheer', 'owl-md pop')}<div><h3>${c.orig ? t('fixedYourself') : t('solvedNow')}</h3><p>${t('fixedText')}</p></div></div>`;
+    celebrate = `<div class="celebrate" data-focus>${owl('cheer', 'owl-md pop')}<div><h3>${c.hl ? t('fixedHintsTitle') : c.orig ? t('fixedYourself') : t('solvedNow')}</h3><p>${t('fixedText')}</p></div></div>`;
   }
   let sol = '';
   if (c.showSol) {
     const steps = p.steps[S.lang];
-    sol = `<section class="solution"><h3>${t('solution')}</h3><ol class="sol steps-rev">${steps.slice(0, c.steps).map((x, k) => `<li class="${k === c.steps - 1 ? 'new' : ''}" ${k === c.steps - 1 ? 'data-focus' : ''}><span class="sn">${k + 1}</span><span>${esc(x)}</span></li>`).join('')}</ol>
+    sol = `<section class="solution"><h3>${owl(c.status === 'failed' ? 'oops' : 'think', 'owl-xs')} ${t('solution')}</h3><ol class="sol steps-rev">${steps.slice(0, c.steps).map((x, k) => `<li class="${k === c.steps - 1 ? 'new' : ''}" ${k === c.steps - 1 ? 'data-focus' : ''}><span class="sn">${k + 1}</span><span>${esc(x)}</span></li>`).join('')}</ol>
       ${c.steps < steps.length ? `<p class="muted stepcount">${t('stepN', c.steps, steps.length)}</p>` : ''}</section>`;
     if (c.steps >= steps.length) sol += `<div class="tipcard" data-focus><b>📌 ${t('rememberIt')}</b><p>${esc(tx(p.tip))}</p></div>`;
   }
@@ -523,7 +593,7 @@ function screenReview(g, sid, startAt) {
   return `${topBar({ back: `#/g/${g}/results/${rv.sid}`, title: t('reviewTitle'), sub: t('reviewOf', rv.i + 1, n) })}
   <div class="rvprog"><i style="width:${((rv.i + (c.status === 'trying' ? 0 : 1)) / n) * 100}%"></i></div>
   <main class="wrap review">
-    ${problemHTML(p, `${t('question')} ${it.n}`)}
+    ${problemHTML(p, `${t('question')} ${it.n}`, it.h ? `<span class="hmark" title="${esc(t('hintMark', it.h))}">💡 ${it.h}</span>` : '')}
     ${parts.join('')}
     ${optsBlock}
     ${celebrate}
@@ -534,13 +604,16 @@ function screenReview(g, sid, startAt) {
 
 function reviewDone(g) {
   const rv = S.rv;
-  const x = rv.solvedSelf, y = rv.list.length;
+  const x = rv.solvedSelf, z = rv.solvedHints, y = rv.list.length;
   return `${topBar({ back: `#/g/${g}`, title: t('reviewTitle') })}
   <main class="wrap center-col rdone">
-    ${owl(x ? 'cheer' : 'happy', 'owl-hero pop')}
+    ${owl(x || z ? 'cheer' : 'happy', 'owl-hero pop')}
     <h1 class="h-big">${t('reviewDoneTitle')}</h1>
-    <div class="bigscore"><b>${x}</b><span>/ ${y}</span></div>
+    <div class="bigscore"><b>${x}</b><span>/ ${y} ${t('reviewDoneSelf')}</span></div>
+    ${z ? `<div class="rchips"><span class="rc hint">💡 ${z} ${t('reviewDoneHints')}</span></div>` : ''}
     <p class="lead">${x ? t('reviewDoneText', x, y) : t('reviewDoneZero')}</p>
+    ${bubble(esc(t('rvDoneSay')), 'cheer')}
+    ${z ? `<p class="lead sm">${t('fixedWithHintsLine', z)}</p>` : ''}
     <div class="cta-col">
       <button class="btn primary big" data-act="start" data-mode="quick">⚡ ${t('modeQuick')}</button>
       <div class="row"><button class="btn second" data-act="nav" data-to="#/g/${g}/progress">📈 ${t('modeProgress')}</button><button class="btn ghost" data-act="nav" data-to="#/g/${g}">${t('home')}</button></div>
@@ -570,12 +643,12 @@ function screenProgress(g) {
   const all = S.data[g];
   const gr = store.grade(g);
   const sum = L.gradeSummary(gr);
-  const m = L.topicMastery(all, gr);
-  const topics = [...new Set(all.map((p) => p.topic))];
+  const m = L.topicMastery(L.regular(all), gr);
   const have = new Set(gr.badges.map((b) => b.id));
   const hist = gr.sessions.slice().reverse().slice(0, 40);
   return `${topBar({ back: `#/g/${g}`, title: t('progressTitle'), sub: gr.nickname ? `${gr.nickname}, ${t('gradeN', g)}` : t('gradeN', g) })}
   <main class="wrap progress">
+    ${bubble(esc(t('progressSay', sum.sessions)), sum.sessions ? 'cheer' : 'think')}
     <section class="stats3 four">
       <div class="stat"><b>${sum.sessions}</b><span>${t('statSessions')}</span></div>
       <div class="stat"><b>${sum.acc == null ? '-' : pct(sum.acc)}</b><span>${t('statAccuracy')}</span></div>
@@ -585,7 +658,7 @@ function screenProgress(g) {
     <div class="pgrid">
       <section class="card">
         <h3>${t('accuracyOverTime')}</h3>
-        ${gr.sessions.length ? chartSVG(gr.sessions) : bubble(t('noSessions'), 'think')}
+        ${gr.sessions.some((x) => x.mode !== 'challenge') ? chartSVG(gr.sessions.filter((x) => x.mode !== 'challenge')) : bubble(t('emptySay'), 'sleep') + `<p class="muted">${t('noSessions')}</p>`}
       </section>
       <section class="card">
         <h3>${t('topicMastery')}</h3>
@@ -700,11 +773,12 @@ function advance() {
   S.lockUntil = Date.now() + 380;
   if (s.idx >= s.ids.length) { s.idx = s.ids.length - 1; finishQuiz(); return; }
   store.save();
-  render();
-  if (s.mode !== 'mock' && s.idx % 3 === 0) {
+  if (s.mode !== 'mock' && s.idx % 5 === 0) {
     const arr = t('cheer');
-    toast(esc(arr[Math.floor(Math.random() * arr.length)]), 2000, 'cheer');
+    S.cheerIdx = s.idx;
+    S.cheerText = arr[Math.floor(Math.random() * arr.length)];
   }
+  render();
 }
 
 function finishQuiz(timeUp) {
@@ -714,7 +788,7 @@ function finishQuiz(timeUp) {
   const s = gr.active;
   if (!s) return;
   tickNow();
-  const topicsInData = [...new Set(S.data[g].map((p) => p.topic))];
+  const topicsInData = [...new Set(regOf(g).map((p) => p.topic))];
   const { record, newBadges } = L.finishSession(gr, s, S.byId, topicsInData);
   store.save();
   S.newBadges = { sid: record.id, ids: newBadges };
@@ -764,7 +838,46 @@ const A = {
   'retry-load'(el) { S.data[+el.dataset.g] = undefined; render(); },
   'edit-name'() { openModal({ type: 'nickname', g: route().g }); },
   'nick-skip'() { const gr = store.grade(route().g); gr.asked = true; store.save(); closeModal(); },
+  level(el) { const gr = store.grade(route().g); gr.level = el.dataset.lv; store.save(); S.keepScroll = true; render(); },
   start(el) { startSession(el.dataset.mode, el.dataset.topic); },
+  hint() {
+    if (Date.now() < S.hintLock) return;
+    const s = activeSess();
+    if (!s || s.mode === 'mock') return;
+    if (!s.hints) s.hints = s.ids.map(() => 0);
+    const total = hintList(S.byId[s.ids[s.idx]]).length;
+    if (s.hints[s.idx] >= total) return;
+    s.hints[s.idx]++;
+    S.hintLock = Date.now() + 300;
+    store.save();
+    S.keepScroll = true; S.scrollToFocus = true;
+    render();
+  },
+  'rv-hint'() {
+    if (Date.now() < S.hintLock) return;
+    const rv = S.rv, c = rv.card, it = rv.list[rv.i], p = S.byId[it.id];
+    if (c.status !== 'trying' || c.hl >= L.hintList(p, S.lang, false).length) return;
+    c.hl++;
+    S.hintLock = Date.now() + 300;
+    const gr = store.grade(rv.g);
+    const st = gr.problemStats[it.id];
+    if (st) st.hintsUsed = (st.hintsUsed || 0) + 1;
+    const rec = sessionById(gr, rv.sid);
+    const item = rec && rec.items && rec.items.find((x) => x.id === it.id);
+    if (item) item.rh = c.hl;
+    store.save();
+    S.keepScroll = true; S.scrollToFocus = true;
+    render();
+  },
+  'rv-giveup'() {
+    if (locked()) return;
+    const c = S.rv.card;
+    if (c.status !== 'trying') return;
+    c.status = 'failed'; c.showSol = true; c.steps = 1; c.sel = null;
+    S.lockUntil = Date.now() + 300;
+    S.keepScroll = true; S.scrollToFocus = true;
+    render();
+  },
   again(el) { startSession(el.dataset.mode, el.dataset.topic || null); },
   resume() { S.sel = null; S.lockUntil = Date.now() + 300; go(`#/g/${route().g}/quiz`); },
   async discard() {
@@ -832,10 +945,10 @@ const A = {
     S.lockUntil = Date.now() + 400;
     if (c.sel === p.answer) {
       c.status = 'solved';
-      rv.solvedSelf++;
+      if (c.hl) rv.solvedHints++; else rv.solvedSelf++;
       const gr = store.grade(rv.g);
       const st = gr.problemStats[it.id];
-      if (st && st.wrong > 0) { L.markFixed(gr, it.id); L.checkBadges(gr, S.byId, [...new Set(S.data[rv.g].map((q) => q.topic))]); store.save(); }
+      if (st && st.wrong > 0) { L.markFixed(gr, it.id); L.checkBadges(gr, S.byId, [...new Set(regOf(rv.g).map((q) => q.topic))]); store.save(); }
       confetti(40);
     } else {
       c.tried.push(c.sel);
@@ -941,7 +1054,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden && rou
 (function boot() {
   const st = store.load();
   let l = st.lang;
-  if (!l) l = /^uk|^ru/i.test(navigator.language || '') ? 'uk' : 'hu';
+  if (!l) l = 'hu';
   setLang(l);
   render();
   if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {

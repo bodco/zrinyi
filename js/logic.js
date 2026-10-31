@@ -16,9 +16,28 @@ export function shuffle(a) {
 }
 
 export const isOpenMistake = (st) => !!st && st.wrong > 0 && !st.fixed;
+export const isChallenge = (p) => p.level === 'challenge';
+export const regular = (all) => all.filter((p) => !isChallenge(p));
+// effective difficulty: challenge problems count as the hardest
+export const dOf = (p) => (isChallenge(p) ? 3 : p.difficulty);
+export const challengeSet = (all) => all.filter(isChallenge);
+export const CHALLENGE_MAX = 5;
+export const CHALLENGE_N = 8;
+// grades whose data files are filled in; the others show a "coming soon" badge. Extend when new data lands.
+export const READY_GRADES = [2, 5];
+export const isReady = (g) => READY_GRADES.includes(+g);
+
+// hint levels available for a problem: p.hints[lang] if present, else the single guiding hint
+export function hintList(p, lang, fallback = true) {
+  const h = p.hints && (p.hints[lang] || p.hints.hu);
+  if (Array.isArray(h) && h.length) return h;
+  if (!fallback) return [];
+  const one = p.hint && (p.hint[lang] || p.hint.hu);
+  return one ? [one] : [];
+}
 
 export function openMistakes(all, gr) {
-  return all.filter((p) => isOpenMistake(gr.problemStats[p.id]));
+  return regular(all).filter((p) => isOpenMistake(gr.problemStats[p.id]));
 }
 
 function recentIds(gr, nSessions = 3) {
@@ -43,37 +62,87 @@ function ranker(gr) {
 }
 
 function pickBalanced(pool, count, targets, rank) {
-  const scored = pool.map((p) => ({ p, r: rank(p) }));
+  const scored = pool.map((p) => ({ p, r: rank(p), real: !!(p.source && p.source.type === 'real') }));
   const chosen = new Set();
   const out = [];
+  let nReal = 0, nGen = 0;
+  // take k from cands (sorted by rank), keeping real and generated roughly even over the whole session
+  const take = (cands, k) => {
+    const real = cands.filter((x) => x.real), gen = cands.filter((x) => !x.real);
+    while (k > 0 && (real.length || gen.length)) {
+      let useReal;
+      if (!real.length) useReal = false;
+      else if (!gen.length) useReal = true;
+      else {
+        useReal = nReal < nGen ? true : nGen < nReal ? false : real[0].r <= gen[0].r;
+        const under = useReal ? real[0] : gen[0], over = useReal ? gen[0] : real[0];
+        // do not take a much worse (already seen) problem just to balance when the gap is small
+        if (under.r - over.r >= 1 && Math.abs(nReal - nGen) < 2) useReal = !useReal;
+      }
+      const c = (useReal ? real : gen).shift();
+      chosen.add(c.p.id); out.push(c.p);
+      if (c.real) nReal++; else nGen++;
+      k--;
+    }
+  };
   for (const d of [1, 2, 3]) {
-    const cands = scored.filter((x) => x.p.difficulty === d && x.r < 3).sort((a, b) => a.r - b.r);
-    for (const c of cands.slice(0, targets[d] || 0)) { chosen.add(c.p.id); out.push(c.p); }
+    const cands = scored.filter((x) => dOf(x.p) === d && x.r < 3 && !chosen.has(x.p.id)).sort((a, b) => a.r - b.r);
+    take(cands, targets[d] || 0);
   }
   if (out.length < count) {
-    const rest = scored.filter((x) => !chosen.has(x.p.id)).sort((a, b) => a.r - b.r);
-    for (const c of rest) { if (out.length >= count) break; chosen.add(c.p.id); out.push(c.p); }
+    take(scored.filter((x) => !chosen.has(x.p.id)).sort((a, b) => a.r - b.r), count - out.length);
   }
   return out.slice(0, count);
 }
 
-const byDifficulty = (list) => shuffle(list).sort((a, b) => a.difficulty - b.difficulty);
+// easy to hard: difficulty asc, then real problems by source.no asc, generated ones after them in random order
+function orderKey(p) { return p.source && p.source.type === 'real' ? [0, p.source.no || 0] : [1, 0]; }
+export function easyToHard(list) {
+  return shuffle(list).sort((a, b) => {
+    if (dOf(a) !== dOf(b)) return dOf(a) - dOf(b);
+    const ka = orderKey(a), kb = orderKey(b);
+    if (ka[0] !== kb[0]) return ka[0] - kb[0];
+    return ka[1] - kb[1];
+  });
+}
+
+// practice level per grade: 'contest' (default, county-round mix incl. hardest problems) or 'easy' (gentler)
+export const LEVELS = ['contest', 'easy'];
+export const levelOf = (gr) => (gr && gr.level === 'easy' ? 'easy' : 'contest');
+export function practiceTargets(g, level = 'contest') {
+  if (level === 'contest') return { 1: 3, 2: 4, 3: 3 };
+  return g <= 3 ? { 1: 5, 2: 4, 3: 1 } : { 1: 4, 2: 4, 3: 2 };
+}
+
+// challenge mode: up to CHALLENGE_MAX challenge problems plus the hardest regular difficulty-3 ones, CHALLENGE_N in total
+function pickChallenge(all, rank) {
+  const ch = challengeSet(all).map((p) => ({ p, r: rank(p) })).sort((a, b) => a.r - b.r).slice(0, CHALLENGE_MAX).map((x) => x.p);
+  const need = CHALLENGE_N - ch.length;
+  const hard = regular(all).filter((p) => p.difficulty === 3)
+    .sort((a, b) => ((b.source && b.source.type === 'real' ? b.source.no || 0 : 0) - (a.source && a.source.type === 'real' ? a.source.no || 0 : 0)))
+    .slice(0, need + 6)
+    .map((p) => ({ p, r: rank(p) })).sort((a, b) => a.r - b.r).slice(0, need).map((x) => x.p);
+  return [...easyToHard(hard), ...easyToHard(ch)];
+}
+export const challengeCount = (all) => (challengeSet(all).length ? Math.min(CHALLENGE_N, all.length) : 0);
 
 export function selectProblems(all, gr, mode, topic) {
   const rank = ranker(gr);
+  const g = all[0] ? all[0].grade : 5;
+  if (mode === 'challenge') return pickChallenge(all, rank);
+  const level = levelOf(gr);
+  const reg = level === 'contest' ? all : regular(all);
   if (mode === 'mistakes') {
     const pool = openMistakes(all, gr).sort((a, b) => (gr.problemStats[a.id].lastSeen || 0) - (gr.problemStats[b.id].lastSeen || 0));
-    return byDifficulty(pool.slice(0, PRACTICE_N));
+    return easyToHard(pool.slice(0, PRACTICE_N));
   }
   if (mode === 'mock') {
-    const g = all[0] ? all[0].grade : 5; const n = mockN(g);
+    const n = mockN(g);
     const tg = n === 30 ? { 1: 9, 2: 12, 3: 9 } : { 1: 8, 2: 10, 3: 7 };
-    return byDifficulty(pickBalanced(all, n, tg, rank));
+    return easyToHard(pickBalanced(reg, n, tg, rank));
   }
-  const pool = mode === 'topic' ? all.filter((p) => p.topic === topic) : all;
-  const g = all[0] ? all[0].grade : 5;
-  const targets = g <= 3 ? { 1: 4, 2: 4, 3: 2 } : { 1: 3, 2: 4, 3: 3 };
-  return byDifficulty(pickBalanced(pool, PRACTICE_N, targets, rank));
+  const pool = mode === 'topic' ? reg.filter((p) => p.topic === topic) : reg;
+  return easyToHard(pickBalanced(pool, PRACTICE_N, practiceTargets(g, level), rank));
 }
 
 export function newSession(grade, mode, topic, problems) {
@@ -81,6 +150,7 @@ export function newSession(grade, mode, topic, problems) {
     grade, mode, topic: topic || null,
     ids: problems.map((p) => p.id),
     answers: problems.map(() => null), // letter or null
+    hints: problems.map(() => 0), // hint levels opened per problem
     idx: 0,
     elapsed: 0, // ms, excluding pauses
     started: Date.now(),
@@ -113,7 +183,10 @@ export function finishSession(gr, sess, byId, topicsInData) {
   const items = sess.ids.map((id, i) => {
     const p = byId[id];
     const a = sess.answers[i];
-    return { id, a, ok: a ? a === p.answer : null };
+    const h = (sess.hints && sess.hints[i]) || 0;
+    const it = { id, a, ok: a ? a === p.answer : null };
+    if (h > 0) it.h = h;
+    return it;
   });
   const correct = items.filter((x) => x.ok === true).length;
   const wrong = items.filter((x) => x.ok === false).length;
@@ -123,6 +196,7 @@ export function finishSession(gr, sess, byId, topicsInData) {
     const st = gr.problemStats[it.id] || (gr.problemStats[it.id] = { seen: 0, correct: 0, wrong: 0, fixed: false, lastSeen: 0 });
     st.seen++;
     st.lastSeen = now;
+    if (it.h) { st.hintsUsed = (st.hintsUsed || 0) + it.h; if (it.ok === true) st.hintOk = (st.hintOk || 0) + 1; }
     if (it.ok === true) {
       st.correct++;
       if (st.wrong > 0 && !st.fixed) { st.fixed = true; gr.fixedTotal = (gr.fixedTotal || 0) + 1; it.fx = 1; }
@@ -189,15 +263,17 @@ export function checkBadges(gr, byId, topicsInData) {
 }
 
 export function gradeSummary(gr) {
-  const s = gr.sessions;
+  const all = gr.sessions;
+  const s = all.filter((x) => x.mode !== 'challenge'); // challenge rounds do not count towards accuracy
   const n = s.reduce((a, x) => a + x.n, 0);
   const c = s.reduce((a, x) => a + x.correct, 0);
   return {
-    sessions: s.length,
+    sessions: all.length,
     acc: n ? c / n : null,
     streak: currentStreak(gr),
     last: s[s.length - 1] || null,
     bestStars: s.length ? Math.max(...s.map((x) => starsOf(x.acc))) : 0,
+    unaided: Object.values(gr.problemStats).reduce((a, x) => a + Math.max(0, (x.correct || 0) - (x.hintOk || 0)), 0),
     bestMock: s.filter((x) => x.mode === 'mock').reduce((m, x) => Math.max(m, x.score), -1)
   };
 }

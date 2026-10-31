@@ -133,6 +133,15 @@ export function practiceTargets(g, level = 'contest') {
   if (level === 'contest') return { 1: 3, 2: 4, 3: 3 };
   return g <= 3 ? { 1: 5, 2: 4, 3: 1 } : { 1: 4, 2: 4, 3: 2 };
 }
+// full training: a paper-length set (mockN) with the same level rules as quick practice, scaled to n
+export function fullTargets(g, level = 'contest', n = mockN(g)) {
+  const base = level === 'contest' ? { 1: 8, 2: 10, 3: 7 } : g <= 3 ? { 1: 11, 2: 10, 3: 4 } : { 1: 9, 2: 10, 3: 6 };
+  if (n === 25) return base;
+  const k = n / 25;
+  const out = { 1: Math.round(base[1] * k), 3: Math.round(base[3] * k) };
+  out[2] = n - out[1] - out[3];
+  return out;
+}
 
 // challenge mode: up to CHALLENGE_MAX challenge problems plus the hardest regular difficulty-3 ones, CHALLENGE_N in total
 function pickChallenge(all, rank) {
@@ -161,7 +170,11 @@ export function selectProblems(all, gr, mode, topic) {
     const tg = n === 30 ? { 1: 9, 2: 12, 3: 9 } : { 1: 8, 2: 10, 3: 7 };
     return easyToHard(pickBalanced(reg, n, tg, rank));
   }
-  const pool = mode === 'topic' ? reg.filter((p) => p.topic === topic) : reg;
+  if (mode === 'full') {
+    const n = mockN(g);
+    return easyToHard(pickBalanced(reg, n, fullTargets(g, level, n), rank));
+  }
+  const pool = mode === 'topic' ? reg.filter((p) => p.topic === topic) : reg; // 'topic' only for old saved sessions
   return easyToHard(pickBalanced(pool, PRACTICE_N, practiceTargets(g, level), rank));
 }
 
@@ -178,6 +191,15 @@ export function newSession(grade, mode, topic, problems) {
   };
 }
 
+// Archie's ranks by lifetime bones (spending never lowers the level)
+export const LEVEL_AT = [0, 60, 150, 300, 500, 800, 1200, 1700, 2400, 3300];
+export function rankOf(earned) {
+  let i = 0;
+  while (i + 1 < LEVEL_AT.length && earned >= LEVEL_AT[i + 1]) i++;
+  const from = LEVEL_AT[i], to = LEVEL_AT[i + 1] == null ? null : LEVEL_AT[i + 1];
+  return { n: i + 1, from, to, into: earned - from, need: to == null ? 0 : to - from, max: to == null };
+}
+
 export function scoreOf(c, w, n = MOCK_N) { return 4 * c - w + n; }
 
 export function starsOf(acc) { return acc >= 0.9 ? 3 : acc >= 0.7 ? 2 : acc >= 0.4 ? 1 : 0; }
@@ -186,20 +208,63 @@ export function dayKey(d = new Date()) {
   const z = (n) => String(n).padStart(2, '0');
   return `${d.getFullYear()}-${z(d.getMonth() + 1)}-${z(d.getDate())}`;
 }
-function dayDiff(a, b) {
+export function dayDiff(a, b) {
   const pa = new Date(a + 'T12:00:00'), pb = new Date(b + 'T12:00:00');
   return Math.round((pb - pa) / 86400000);
 }
+export function addDays(key, n) {
+  const d = new Date(key + 'T12:00:00');
+  d.setDate(d.getDate() + n);
+  return dayKey(d);
+}
 
-export function currentStreak(gr) {
+// Streak freeze ("Archie's blanket"): each blanket protects one missed day automatically.
+export const FREEZE_MAX = 2;
+const freezesOf = (gr) => (gr.rw && gr.rw.freezes) || 0;
+// days missed since the last active day (0 when the streak is still alive without help)
+export function missedDays(gr, today = dayKey()) {
   const st = gr.streak;
   if (!st || !st.last) return 0;
-  const d = dayDiff(st.last, dayKey());
-  return d <= 1 ? st.count : 0;
+  return Math.max(0, dayDiff(st.last, today) - 1);
+}
+export function currentStreak(gr, today = dayKey()) {
+  const st = gr.streak;
+  if (!st || !st.last) return 0;
+  const miss = missedDays(gr, today);
+  if (!miss) return st.count;
+  return freezesOf(gr) >= miss ? st.count : 0; // still alive: the blankets will cover the gap
+}
+// true when the streak is alive only thanks to blankets (shown in the UI)
+export const streakProtected = (gr, today = dayKey()) => missedDays(gr, today) > 0 && currentStreak(gr, today) > 0;
+
+// Count today as an active day. Returns {freezeUsed, freezeEarned, frozenDays}.
+export function bumpStreak(gr, today = dayKey()) {
+  const res = { freezeUsed: 0, freezeEarned: 0, frozenDays: [] };
+  const st = gr.streak;
+  if (!st || !st.last) { gr.streak = { last: today, count: 1 }; return res; }
+  const d = dayDiff(st.last, today);
+  if (d === 0) return res;
+  if (d < 0) { gr.streak = { last: today, count: st.count }; return res; } // clock moved back: keep the streak
+  let count;
+  if (d === 1) count = st.count + 1;
+  else {
+    const miss = d - 1;
+    if (gr.rw && freezesOf(gr) >= miss) {
+      gr.rw.freezes -= miss;
+      res.freezeUsed = miss;
+      for (let i = 1; i <= miss; i++) res.frozenDays.push(addDays(st.last, i));
+      gr.rw.frozen = (gr.rw.frozen || []).concat(res.frozenDays).slice(-30);
+      count = st.count + 1;
+    } else count = 1;
+  }
+  gr.streak = { last: today, count };
+  // every full week of streak earns a blanket
+  if (gr.rw && count % 7 === 0 && freezesOf(gr) < FREEZE_MAX) { gr.rw.freezes = freezesOf(gr) + 1; res.freezeEarned = 1; }
+  return res;
 }
 
 // Commit a finished session; returns {record, newBadges}
-export function finishSession(gr, sess, byId, topicsInData) {
+export function finishSession(gr, sess, byId, topicsInData, today = dayKey()) {
   const items = sess.ids.map((id, i) => {
     const p = byId[id];
     const a = sess.answers[i];
@@ -235,17 +300,10 @@ export function finishSession(gr, sess, byId, topicsInData) {
     timeSec: Math.round(sess.elapsed / 1000), items
   };
   gr.sessions.push(record);
-  // streak
-  const today = dayKey();
-  if (!gr.streak || !gr.streak.last) gr.streak = { last: today, count: 1 };
-  else {
-    const d = dayDiff(gr.streak.last, today);
-    if (d === 1) gr.streak = { last: today, count: gr.streak.count + 1 };
-    else if (d !== 0) gr.streak = { last: today, count: 1 };
-  }
+  const streakRes = bumpStreak(gr, today);
   gr.active = null;
   const newBadges = checkBadges(gr, byId, topicsInData);
-  return { record, newBadges };
+  return { record, newBadges, streakRes };
 }
 
 export function markFixed(gr, id) {
@@ -257,11 +315,12 @@ export function markFixed(gr, id) {
   return true;
 }
 
-export const BADGE_ORDER = ['first', 'streak3', 'streak7', 'perfect', 'fix10', 'sessions10', 'explorer', 'mockDone', 'mock100'];
+export const BADGE_ORDER = ['first', 'streak3', 'streak7', 'streak14', 'perfect', 'fix10', 'sessions10', 'explorer', 'fullDone', 'mockDone', 'mock100', 'goal7', 'chest', 'level3', 'level5'];
 
 export function checkBadges(gr, byId, topicsInData) {
   const have = new Set(gr.badges.map((b) => b.id));
   const s = gr.sessions;
+  const rw = gr.rw;
   const triedTopics = new Set();
   for (const id in gr.problemStats) if (byId[id]) triedTopics.add(byId[id].topic);
   const cond = {
@@ -273,7 +332,13 @@ export function checkBadges(gr, byId, topicsInData) {
     sessions10: s.length >= 10,
     explorer: topicsInData && topicsInData.length > 0 && topicsInData.every((t) => triedTopics.has(t)),
     mockDone: s.some((x) => x.mode === 'mock'),
-    mock100: s.some((x) => x.mode === 'mock' && x.score >= 100)
+    mock100: s.some((x) => x.mode === 'mock' && x.score >= 100),
+    streak14: gr.streak.count >= 14,
+    fullDone: s.some((x) => x.mode === 'full'),
+    goal7: !!rw && (rw.goalDays || 0) >= 7,
+    chest: !!rw && Object.keys(rw.chests || {}).length >= 1,
+    level3: !!rw && rankOf(rw.earned || 0).n >= 3,
+    level5: !!rw && rankOf(rw.earned || 0).n >= 5
   };
   const earned = [];
   for (const id of BADGE_ORDER) {

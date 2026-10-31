@@ -1,7 +1,7 @@
 // Simple offline support. Network-first for everything (so updates always win),
 // cache as fallback when offline. Bump VERSION when changing the shell.
-const VERSION = 'zrinyi-v5';
-const SHELL = ['./', 'index.html', 'css/app.css', 'js/app.js', 'js/i18n.js', 'js/store.js', 'js/logic.js', 'js/mascot.js', 'img/icon.svg', 'manifest.webmanifest'];
+const VERSION = 'zrinyi-v6';
+const SHELL = ['./', 'index.html', 'css/app.css', 'js/app.js', 'js/i18n.js', 'js/store.js', 'js/logic.js', 'js/rewards.js', 'js/mascot.js', 'img/icon.svg', 'manifest.webmanifest'];
 
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(VERSION).then((c) => c.addAll(SHELL)).then(() => self.skipWaiting()));

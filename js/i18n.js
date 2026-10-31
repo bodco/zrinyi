@@ -33,8 +33,10 @@ export const STR = {
     lastScore: 'utolsó',
     modeQuick: 'Gyors gyakorlás',
     modeQuickSub: '10 vegyes feladat, nincs időkorlát',
-    modeTopics: 'Témák',
-    modeTopicsSub: 'Válassz egy témát',
+    modeFull: 'Teljes edzés',
+    modeFullSub: (n) => `${n} feladat, mint a versenyen, időkorlát nélkül, tippekkel`,
+    modeShop: 'Archie szekrénye',
+    modeShopSub: 'Öltöztesd fel csontokért',
     modeMock: 'Próbaverseny',
     modeMockSub: (n, m) => `${n} feladat, ${m} perc, igazi pontozás`,
     modeMistakes: 'Hibák javítása',
@@ -45,10 +47,64 @@ export const STR = {
     resumeText: (d, n) => `${d}/${n} feladat kész.`,
     resume: 'Folytatom',
     discard: 'Elvetem',
-    topicsTitle: 'Válassz témát!',
-    topicCount: (n) => `${n} feladat`,
-    mastery: 'tudás',
-    notTried: 'még nem próbáltad',
+    quitFullTitle: 'Szünetet tartasz?',
+    quitFullText: 'Megjegyzem, hol tartasz. A főoldalon bármikor folytathatod.',
+    quitFullYes: 'Később folytatom',
+    replaceTitle: 'Van egy félbehagyott köröd',
+    replaceText: (m, d, n) => `${m}: ${d}/${n} feladat kész. Ha újat kezdesz, az elvész.`,
+    replaceYes: 'Újat kezdek',
+    // rewards
+    bonesN: (n) => `${n} csont`,
+    bonesWord: 'csont',
+    bonesTitle: 'Archie csontjai',
+    rankNames: ['Kölyök', 'Szimatoló', 'Nyomkereső', 'Ügyes mancs', 'Detektív', 'Fődetektív', 'Mester', 'Nagymester', 'Bajnok', 'Legenda'],
+    levelN: (n) => `${n}. szint`,
+    toNext: (a, b) => `${a}/${b} csont a következő szintig`,
+    maxLevel: 'A legmagasabb szinten vagy!',
+    todayGoal: 'Mai cél',
+    goalOf: (a, b) => `${a}/${b} csont`,
+    goalDone: 'Mai cél teljesítve!',
+    goalLeft: (n) => `Még ${n} csont`,
+    streakN: (n) => n ? `${n} nap egymás után` : 'Ma kezdődhet egy sorozat',
+    streakSafe: 'A takaró vigyáz a sorozatodra',
+    blanketN: (n) => `${n} takaró`,
+    blanketName: 'Archie takarója',
+    blanketDesc: 'Ha kimarad egy nap, megvédi a sorozatodat. 7 nap egymás után ajándékba is jár.',
+    blanketMax: 'Már 2 takaród van',
+    weekTitle: 'Ezen a héten',
+    weekChest: (a, n) => `Heti láda: ${a}/${n} nap`,
+    chestReady: 'A heti láda már a tiéd!',
+    chestTitle: 'Kinyílt a heti láda!',
+    chestText: (n) => `+${n} csont ajándék, mert a héten 5 napon gyakoroltál.`,
+    weekdays: ['H', 'K', 'Sze', 'Cs', 'P', 'Szo', 'V'],
+    partCorrect: (n) => `${n} helyes`,
+    partUnaided: (n) => `${n} tipp nélkül`,
+    partDone: 'befejezett kör',
+    levelUpTitle: 'Új szint!',
+    levelUpText: (n, name) => `Archie elérte a ${n}. szintet: ${name}!`,
+    freezeUsed: (n) => `Archie takarója megvédte a sorozatodat (${n} nap).`,
+    freezeEarned: 'Egy hét egymás után! Kaptál egy takarót.',
+    goalHitToast: 'Mai cél teljesítve! 🎉',
+    plusBones: (n) => `+${n} csont`,
+    homeSayGoal: 'Ma már teljesítetted a napi célt. Szuper vagy! Ha van kedved, gyakorolhatunk még.',
+    homeSayFull: 'Van egy félbehagyott teljes edzésed. Folytassuk, ahol abbahagytad?',
+    shopTitle: 'Archie szekrénye',
+    shopSay: 'Mit vegyek fel ma? Csontot gyakorlással gyűjthetsz, és sosem veszíted el.',
+    slots: { harness: 'Hám', hat: 'Sapka', neck: 'Nyakba', eyes: 'Szemüveg', extra: 'Hasznos' },
+    items: { navy: 'Kék hám', red: 'Piros hám', green: 'Zöld hám', pink: 'Rózsaszín hám', gold: 'Arany hám', bowtie: 'Csokornyakkendő', scarf: 'Csíkos sál', glasses: 'Szemüveg', cap: 'Baseballsapka', crown: 'Korona' },
+    wear: 'Felveszem',
+    takeOff: 'Leveszem',
+    wearing: 'Rajta van',
+    needMore: (n) => `Még ${n} kell`,
+    buyTitle: (x) => `Megveszed? ${x}`,
+    buyText: (p, left) => `${p} csontba kerül. Utána ${left} csontod marad.`,
+    buyYes: 'Megveszem',
+    bought: 'Archie nagyon örül neki!',
+    goalTitle: 'Napi cél',
+    goalNames: { 30: 'Kényelmes', 50: 'Rendes', 80: 'Komoly' },
+    goalDesc: 'Hány csontot gyűjtsön Archie naponta? Csak segít a rendszerességben, nem kötelező.',
+    statBones: 'csont',
+    statLevel: 'szint',
     nicknameTitle: 'Engem Archie-nak hívnak. És téged?',
     nicknameText: 'Ha többen használjátok ezt a gépet, így mindenki a saját eredményeit látja. Nem kötelező.',
     nicknamePh: 'Becenév',
@@ -225,7 +281,7 @@ export const STR = {
     exportOk: 'Elmentve!',
     transferNote: 'Más készülékre úgy viheted át, hogy itt elmented, ott pedig betöltöd a fájlt.',
     sessions: 'kör',
-    modeNames: { quick: 'Gyors gyakorlás', topic: 'Téma', mock: 'Próbaverseny', mistakes: 'Hibák javítása', challenge: 'Kihívás' },
+    modeNames: { quick: 'Gyors gyakorlás', full: 'Teljes edzés', topic: 'Téma', mock: 'Próbaverseny', mistakes: 'Hibák javítása', challenge: 'Kihívás' },
     badgeDefs: {
       first: ['Első lépés', 'Befejezted az első kört'],
       streak3: ['Három nap', '3 napig egymás után gyakoroltál'],
@@ -235,7 +291,13 @@ export const STR = {
       mockDone: ['Versenyző', 'Végigcsináltál egy próbaversenyt'],
       mock100: ['Százas klub', 'Legalább 100 pont a próbaversenyen'],
       sessions10: ['Kitartó', '10 befejezett kör'],
-      explorer: ['Felfedező', 'Minden témát kipróbáltál']
+      explorer: ['Felfedező', 'Minden témát kipróbáltál'],
+      streak14: ['Két hét', '14 napig egymás után gyakoroltál'],
+      fullDone: ['Hosszú táv', 'Végigcsináltál egy teljes edzést'],
+      goal7: ['Célba értem', '7 napon teljesítetted a napi célt'],
+      chest: ['Kincskereső', 'Kinyitottad a heti ládát'],
+      level3: ['Nyomkereső', 'Archie elérte a 3. szintet'],
+      level5: ['Detektív', 'Archie elérte az 5. szintet']
     },
     newBadge: 'Új jelvény!',
     // parents
@@ -266,8 +328,10 @@ export const STR = {
     lastScore: 'останнє',
     modeQuick: 'Швидке тренування',
     modeQuickSub: '10 різних задач, без обмеження часу',
-    modeTopics: 'Теми',
-    modeTopicsSub: 'Обери одну тему',
+    modeFull: 'Повне тренування',
+    modeFullSub: (n) => `${zad(n)}, як на конкурсі, без таймера, з підказками`,
+    modeShop: 'Шафа Арчі',
+    modeShopSub: 'Одягни Арчі за кісточки',
     modeMock: 'Пробний конкурс',
     modeMockSub: (n, m) => `${zad(n)}, ${m} хв, справжні бали`,
     modeMistakes: 'Робота над помилками',
@@ -278,10 +342,63 @@ export const STR = {
     resumeText: (d, n) => `Виконано ${d} з ${n} задач.`,
     resume: 'Продовжити',
     discard: 'Скасувати',
-    topicsTitle: 'Обери тему!',
-    topicCount: (n) => zad(n),
-    mastery: 'знання',
-    notTried: 'ще не було спроб',
+    quitFullTitle: 'Зробиш перерву?',
+    quitFullText: 'Я запамʼятаю, де ти зупинився. Продовжити можна на головній сторінці будь-коли.',
+    quitFullYes: 'Продовжу пізніше',
+    replaceTitle: 'У тебе є незавершене тренування',
+    replaceText: (m, d, n) => `${m}: виконано ${d} з ${n}. Якщо почнеш нове, це зникне.`,
+    replaceYes: 'Почати нове',
+    bonesN: (n) => `${n} ${ukPl(n, 'кісточка', 'кісточки', 'кісточок')}`,
+    bonesWord: 'кісточок',
+    bonesTitle: 'Кісточки Арчі',
+    rankNames: ['Цуценя', 'Нюхач', 'Слідопит', 'Спритна лапка', 'Детектив', 'Головний детектив', 'Майстер', 'Гросмейстер', 'Чемпіон', 'Легенда'],
+    levelN: (n) => `Рівень ${n}`,
+    toNext: (a, b) => `${a} з ${b} кісточок до наступного рівня`,
+    maxLevel: 'Це найвищий рівень!',
+    todayGoal: 'Мета на сьогодні',
+    goalOf: (a, b) => `${a} з ${b} кісточок`,
+    goalDone: 'Мету на сьогодні виконано!',
+    goalLeft: (n) => `Ще ${n}`,
+    streakN: (n) => n ? `${n} ${ukPl(n, 'день', 'дні', 'днів')} поспіль` : 'Сьогодні можна почати серію',
+    streakSafe: 'Ковдрочка береже твою серію',
+    blanketN: (n) => `${n} ${ukPl(n, 'ковдрочка', 'ковдрочки', 'ковдрочок')}`,
+    blanketName: 'Ковдрочка Арчі',
+    blanketDesc: 'Якщо пропустиш день, вона збереже твою серію. За 7 днів поспіль одна дається в подарунок.',
+    blanketMax: 'Вже є 2 ковдрочки',
+    weekTitle: 'Цього тижня',
+    weekChest: (a, n) => `Скриня тижня: ${a} з ${n} днів`,
+    chestReady: 'Скриня тижня вже твоя!',
+    chestTitle: 'Скриня тижня відкрилась!',
+    chestText: (n) => `+${n} кісточок у подарунок, бо цього тижня ти тренувався 5 днів.`,
+    weekdays: ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Нд'],
+    partCorrect: (n) => `${n} правильно`,
+    partUnaided: (n) => `${n} без підказок`,
+    partDone: 'завершене тренування',
+    levelUpTitle: 'Новий рівень!',
+    levelUpText: (n, name) => `Арчі досяг рівня ${n}: ${name}!`,
+    freezeUsed: (n) => `Ковдрочка Арчі зберегла твою серію (${n} ${ukPl(n, 'день', 'дні', 'днів')}).`,
+    freezeEarned: 'Тиждень поспіль! Ти отримав ковдрочку.',
+    goalHitToast: 'Мету на сьогодні виконано! 🎉',
+    plusBones: (n) => `+${n} ${ukPl(n, 'кісточка', 'кісточки', 'кісточок')}`,
+    homeSayGoal: 'Сьогоднішню мету вже виконано. Ти супер! Якщо хочеш, потренуємося ще.',
+    homeSayFull: 'У тебе є незавершене повне тренування. Продовжимо з того місця?',
+    shopTitle: 'Шафа Арчі',
+    shopSay: 'Що мені вдягнути сьогодні? Кісточки збираєш, коли тренуєшся, і ніколи їх не втрачаєш.',
+    slots: { harness: 'Шлейка', hat: 'Шапка', neck: 'На шию', eyes: 'Окуляри', extra: 'Корисне' },
+    items: { navy: 'Синя шлейка', red: 'Червона шлейка', green: 'Зелена шлейка', pink: 'Рожева шлейка', gold: 'Золота шлейка', bowtie: 'Метелик', scarf: 'Смугастий шарф', glasses: 'Окуляри', cap: 'Кепка', crown: 'Корона' },
+    wear: 'Вдягнути',
+    takeOff: 'Зняти',
+    wearing: 'Вдягнено',
+    needMore: (n) => `Ще ${n}`,
+    buyTitle: (x) => `Купити? ${x}`,
+    buyText: (p, left) => `Коштує ${p} ${ukPl(p, 'кісточку', 'кісточки', 'кісточок')}. Після цього залишиться ${left}.`,
+    buyYes: 'Купити',
+    bought: 'Арчі дуже радий!',
+    goalTitle: 'Мета на день',
+    goalNames: { 30: 'Легка', 50: 'Звичайна', 80: 'Серйозна' },
+    goalDesc: 'Скільки кісточок Арчі збирає щодня? Це лише допомагає тренуватися регулярно, не обовʼязково.',
+    statBones: 'кісточок',
+    statLevel: 'рівень',
     nicknameTitle: 'Мене звати Арчі. А тебе?',
     nicknameText: 'Якщо цим пристроєм користуються кілька дітей, так кожен бачитиме свої результати. Це необовʼязково.',
     nicknamePh: 'Імʼя',
@@ -453,7 +570,7 @@ export const STR = {
     exportOk: 'Збережено!',
     transferNote: 'Щоб перенести прогрес на інший пристрій, збережи файл тут і завантаж його там.',
     sessions: 'тренувань',
-    modeNames: { quick: 'Швидке тренування', topic: 'Тема', mock: 'Пробний конкурс', mistakes: 'Робота над помилками', challenge: 'Виклик' },
+    modeNames: { quick: 'Швидке тренування', full: 'Повне тренування', topic: 'Тема', mock: 'Пробний конкурс', mistakes: 'Робота над помилками', challenge: 'Виклик' },
     badgeDefs: {
       first: ['Перший крок', 'Перше завершене тренування'],
       streak3: ['Три дні', '3 дні тренувань поспіль'],
@@ -463,7 +580,13 @@ export const STR = {
       mockDone: ['Учасник', 'Пробний конкурс пройдено'],
       mock100: ['Клуб 100', 'Щонайменше 100 балів у пробному конкурсі'],
       sessions10: ['Наполегливий', '10 завершених тренувань'],
-      explorer: ['Дослідник', 'Усі теми спробувано']
+      explorer: ['Дослідник', 'Усі теми спробувано'],
+      streak14: ['Два тижні', '14 днів тренувань поспіль'],
+      fullDone: ['Довга дистанція', 'Пройдено повне тренування'],
+      goal7: ['У ціль', 'Мету дня виконано 7 разів'],
+      chest: ['Шукач скарбів', 'Відкрито скриню тижня'],
+      level3: ['Слідопит', 'Арчі досяг 3 рівня'],
+      level5: ['Детектив', 'Арчі досяг 5 рівня']
     },
     newBadge: 'Новий значок!',
     parentsTitle: 'Батькам',
@@ -485,7 +608,8 @@ export const TOPICS = {
 
 export const BADGE_ICONS = {
   first: '🌱', streak3: '🔥', streak7: '🏅', fix10: '🔍', perfect: '💯',
-  mockDone: '🎯', mock100: '🏆', sessions10: '💪', explorer: '🧭'
+  mockDone: '🎯', mock100: '🏆', sessions10: '💪', explorer: '🧭',
+  streak14: '📆', fullDone: '🏃', goal7: '🥇', chest: '🎁', level3: '🐾', level5: '🕵️'
 };
 
 // Parents page content (rich HTML, trusted, authored here)
@@ -509,13 +633,14 @@ export const PARENTS = {
   <h2>Hogyan használjuk az oldalt?</h2>
   <ul>
     <li><b>Gyors gyakorlás:</b> 10 vegyes feladat. A gyerek a kör végén látja az eredményt, nem feladatonként.</li>
-    <li><b>Témák:</b> ha egy terület nehezebben megy, 10 feladat csak abból.</li>
+    <li><b>Teljes edzés:</b> egy teljes feladatlapnyi feladat (25, 7-8. osztályban 30) könnyűtől a nehézig, mint a versenyen, de időkorlát nélkül és tippekkel. Hosszú, ezért bármikor abbahagyható és később folytatható. A témánkénti tudás a Haladásom oldalon látszik.</li>
     <li><b>Próbaverseny:</b> 25 (7-8. osztályban 30) feladat könnyűtől a nehézig, valódi időkorláttal és pontozással. Megállítható.</li>
     <li><b>Hibák javítása:</b> a legfontosabb rész. Minden hibánál előbb elmagyarázzuk, miért választhatta a gyerek azt a választ, adunk egy rávezető kérdést, és még egyszer megpróbálhatja. Csak ezután jön a lépésenkénti megoldás.</li>
     <li><b>Segítség (tippek):</b> gyakorláskor és javításkor minden feladatnál kérhet a gyerek tippet. A tippek szintenként nyílnak: az első csak egy apró terelés, az utolsó már részletes, de a választ soha nem árulja el. A próbaversenyen nincs tipp. Ha helyesen válaszolt tipp után, az eredmény helyes, de 💡 jelzi, hogy segítséggel ment. A javításnál a "magadtól" csak az, amit tippek nélkül sikerült kijavítani.</li>
     <li><b>Automatikus tippek és szint:</b> ha a gyerek egy ideig nem válaszol, a következő tipp magától kinyílik; a várakozás a feladat nehézségétől és az osztálytól függ, és tippről tippre nő (a próbaversenyen soha). Ez, valamint a gyakorlás szintje ("Mint a versenyen" vagy "Könnyebb") az osztály kezdőoldalán állítható.</li>
     <li><b>Archie:</b> a kis Jack Russell terrier végig a gyerek mellett van, bátorít, és gondolkodik vele. Gyakorláskor nem árulja el, jó-e a válasz, az eredmény a kör végén jön.</li>
     <li><b>Kihívások:</b> ha a kör könnyűnek tűnik, a nehezebb versenyfeladatokból is lehet gyakorolni (időkorlát nélkül). Ezek nem kerülnek a többi körbe.</li>
+    <li><b>Csontok, napi cél, sorozat, szekrény:</b> Archie csontokat gyűjt: minden helyes válaszért, a tipp nélküli megoldásért, a befejezett körért és a magától kijavított hibáért. Rossz válaszért soha nem von le semmit. A napi cél (30, 50 vagy 80 csont) a Haladásom oldalon állítható. A sorozat azt számolja, hány nap egymás után gyakorolt a gyerek; ha egy nap kimarad, "Archie takarója" megvédi (7 nap után ajándékba jár, vagy csontért vehető). Ha egy héten 5 napon gyakorol, kinyílik a heti láda. A csontokból Archie-nak ruhát vehet a szekrényben, ez csak játék, semmilyen előnyt nem ad. Nincs időzített értesítés, nincs sürgetés: minden csak az oldalon belül látszik.</li>
     <li>Tipp: 10-15 perc naponta többet ér, mint egy hosszú hétvégi alkalom. Üljön le mellé, és kérje meg, hogy hangosan gondolkodjon!</li>
   </ul>
   <h2>Adatok</h2>
@@ -542,13 +667,14 @@ export const PARENTS = {
   <h2>Як користуватися сайтом</h2>
   <ul>
     <li><b>Швидке тренування:</b> 10 різних задач. Дитина бачить результат наприкінці, а не після кожної задачі.</li>
-    <li><b>Теми:</b> якщо якась тема дається важче, 10 задач лише з неї.</li>
+    <li><b>Повне тренування:</b> задачі на цілий бланк (25, у 7-8 класі 30) від легких до складних, як на конкурсі, але без таймера і з підказками. Воно довге, тому його можна перервати й продовжити пізніше. Знання за темами видно на сторінці "Мій прогрес".</li>
     <li><b>Пробний конкурс:</b> 25 (у 7-8 класі 30) задач від легких до складних, зі справжнім часом і балами. Можна поставити на паузу.</li>
     <li><b>Робота над помилками:</b> найважливіша частина. Для кожної помилки спершу пояснюємо, чому дитина могла обрати цю відповідь, даємо навідне питання і ще одну спробу. Лише потім показуємо розвʼязок крок за кроком.</li>
     <li><b>Підказки:</b> під час тренування і роботи над помилками до кожної задачі можна попросити підказку. Підказки відкриваються рівнями: перша лише легенько спрямовує, остання вже детальна, але відповідь не розкриває ніколи. У пробному конкурсі підказок немає. Якщо дитина відповіла правильно після підказки, результат зараховується, а значок 💡 показує, що вона була з допомогою. У роботі над помилками "сам" означає лише те, що виправлено без підказок.</li>
     <li><b>Автоматичні підказки й рівень:</b> якщо дитина якийсь час не відповідає, наступна підказка відкривається сама; час очікування залежить від складності задачі й класу та зростає від підказки до підказки (у пробному конкурсі ніколи). Це, а також рівень тренування ("Як на конкурсі" чи "Легше"), налаштовується на головній сторінці класу.</li>
     <li><b>Арчі:</b> маленький джек-рассел-терʼєр увесь час поруч із дитиною, підбадьорює і думає разом із нею. Під час тренування він не підказує, чи правильна відповідь, результат буде наприкінці кола.</li>
     <li><b>Виклики:</b> якщо коло здається легким, можна потренуватися на складніших конкурсних задачах (без таймера). Вони не потрапляють в інші кола.</li>
+    <li><b>Кісточки, мета дня, серія, шафа:</b> Арчі збирає кісточки: за кожну правильну відповідь, за розвʼязок без підказок, за завершене тренування і за помилку, виправлену самостійно. За неправильну відповідь нічого не забирається. Мету дня (30, 50 або 80 кісточок) можна змінити на сторінці "Мій прогрес". Серія рахує, скільки днів поспіль дитина тренується; якщо день пропущено, "ковдрочка Арчі" зберігає серію (дається в подарунок за 7 днів поспіль або купується за кісточки). Якщо за тиждень є 5 днів тренувань, відкривається скриня тижня. За кісточки в шафі можна купити Арчі одяг, це лише гра і жодних переваг не дає. Немає нагадувань за таймером і поспіху: усе видно лише всередині сайту.</li>
     <li>Порада: 10-15 хвилин щодня дають більше, ніж одне довге заняття у вихідні. Сядьте поруч і попросіть дитину міркувати вголос!</li>
   </ul>
   <h2>Дані</h2>

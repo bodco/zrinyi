@@ -3,11 +3,39 @@
 // The exported name `owl` is kept for backwards compatibility with app.js.
 const BROWN = '#B8692E', BROWN_D = '#8A4A1C', INK = '#2A1E17', WHITE = '#FFFDF8', LINE = '#5B3A22';
 
+// Outfit from the wardrobe: {harness: color, hat: 'cap'|'crown', neck: 'bowtie'|'scarf', eyes: 'glasses'}.
+// app.js calls setOutfit() when the grade changes, so every Archie on screen wears the same things.
+let OUTFIT = null;
+export function setOutfit(o) { OUTFIT = o || null; }
+export function getOutfit() { return OUTFIT; }
+
+const ACC = {
+  // drawn before the head, so the muzzle overlaps the knot
+  scarf: `<g class="acc acc-scarf"><path d="M39 70 Q60 83 81 70 L83 81 Q60 95 37 81 Z" fill="#F97316" stroke="${LINE}" stroke-width="1.5" stroke-linejoin="round"/>
+    <path d="M44 80 L39 101 L50 103 L53 85 Z" fill="#F97316" stroke="${LINE}" stroke-width="1.5" stroke-linejoin="round"/>
+    <path d="M41 76 L39 82 M47 79 L45 86 M74 79 L76 86 M79 76 L81 82 M42 93 L50 95" stroke="#FFF3D6" stroke-width="2.4" stroke-linecap="round"/></g>`,
+  bowtie: `<g class="acc acc-bow"><path d="M60 86 L47 79 Q45 86 47 93 Z M60 86 L73 79 Q75 86 73 93 Z" fill="#E5484D" stroke="${LINE}" stroke-width="1.5" stroke-linejoin="round"/>
+    <rect x="56" y="82" width="8" height="8" rx="2.5" fill="#C62F35" stroke="${LINE}" stroke-width="1.3"/>
+    <circle cx="51" cy="84" r="1.3" fill="#fff" opacity=".8"/><circle cx="69" cy="88" r="1.3" fill="#fff" opacity=".8"/></g>`,
+  glasses: `<g class="acc acc-glasses" fill="rgba(255,255,255,.22)" stroke="${INK}" stroke-width="2.3" stroke-linecap="round">
+    <circle cx="47" cy="40" r="8.6"/><circle cx="73" cy="40" r="8.6"/><path d="M55.5 39 Q60 35.5 64.5 39 M38.6 38 L34 35.5 M81.4 38 L86 35.5" fill="none"/></g>`,
+  cap: `<g class="acc acc-cap"><path d="M38 26 C38 3 82 3 82 26 Z" fill="#2F80ED" stroke="${LINE}" stroke-width="1.6" stroke-linejoin="round"/>
+    <path d="M60 6 L60 25 M48 9 Q46 17 47 25" stroke="#1D5FBF" stroke-width="1.4" fill="none"/>
+    <path d="M36 24 Q60 30 82 23 Q97 21 101 27 Q88 33 60 32 Q44 32 35 28 Z" fill="#1D5FBF" stroke="${LINE}" stroke-width="1.6" stroke-linejoin="round"/>
+    <path d="M70 13 h8" stroke="#fff" stroke-width="2.2" stroke-linecap="round" opacity=".7"/>
+    <circle cx="60" cy="5.500" r="2.6" fill="#FFC83D" stroke="${LINE}" stroke-width="1.2"/></g>`,
+  crown: `<g class="acc acc-crown"><path d="M42 21 L39 3 L50 11 L60 -1 L70 11 L81 3 L78 21 Z" fill="#FFC83D" stroke="#9A6A12" stroke-width="1.6" stroke-linejoin="round"/>
+    <path d="M42 17 L78 17" stroke="#E0A400" stroke-width="2.4"/>
+    <circle cx="60" cy="11" r="2.6" fill="#E5484D"/><circle cx="49" cy="15" r="1.9" fill="#38BDF8"/><circle cx="71" cy="15" r="1.9" fill="#22C55E"/>
+    <circle cx="39" cy="3" r="2" fill="#FFE58A" stroke="#9A6A12" stroke-width="1"/><circle cx="60" cy="-1" r="2" fill="#FFE58A" stroke="#9A6A12" stroke-width="1"/><circle cx="81" cy="3" r="2" fill="#FFE58A" stroke="#9A6A12" stroke-width="1"/></g>`
+};
+
 let _aid = 0;
-export function archie(mood = 'happy', cls = '') {
+export function archie(mood = 'happy', cls = '', outfit = OUTFIT) {
   const id = 'ar-hc' + (++_aid);
   const S = `stroke="${LINE}" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"`;
-  const NAVY = 'var(--owl-harness,#2B3A67)';
+  const o = outfit || {};
+  const NAVY = o.harness || 'var(--owl-harness,#2B3A67)';
   const M = mood === 'wave' || mood === 'point' ? 'happy' : mood;
   const dark = (x, y, rx, ry) => `<ellipse cx="${x}" cy="${y}" rx="${rx}" ry="${ry}" fill="${INK}"/><circle cx="${x + 1.6}" cy="${y - 2}" r="1.8" fill="#fff"/>`;
   const eyes = {
@@ -75,7 +103,8 @@ export function archie(mood = 'happy', cls = '') {
     <!-- harness -->
     <path d="M42 80 Q60 92 78 80 L78 86 Q60 98 42 86 Z" fill="${NAVY}" stroke="${LINE}" stroke-width="1.3" stroke-linejoin="round"/>
     <path d="M60 92 L60 106" stroke="${NAVY}" stroke-width="3.5" stroke-linecap="round"/>
-    <circle cx="60" cy="91" r="5" fill="#FFC83D" stroke="${LINE}" stroke-width="1.3"/><circle cx="60" cy="91" r="2" fill="${NAVY}"/>
+    ${o.neck === 'bowtie' ? '' : `<circle cx="60" cy="91" r="5" fill="#FFC83D" stroke="${LINE}" stroke-width="1.3"/><circle cx="60" cy="91" r="2" fill="${NAVY}"/>`}
+    ${o.neck === 'scarf' ? ACC.scarf : ''}
     ${pawUp}
     <!-- head: brown with white blaze and long white muzzle -->
     <path d="${HEAD}" fill="${BROWN}"/>
@@ -89,11 +118,20 @@ export function archie(mood = 'happy', cls = '') {
     <ellipse cx="56.5" cy="59" rx="2.8" ry="1.1" fill="#fff" opacity=".6"/>
     ${eyes}
     ${mouth}
+    ${o.eyes && ACC[o.eyes] ? ACC[o.eyes] : ''}
+    ${o.neck === 'bowtie' ? ACC.bowtie : ''}
+    ${o.hat && ACC[o.hat] ? ACC[o.hat] : ''}
     ${extra}
   </g></svg>`;
 }
 
 export const owl = archie;
+
+// Archie's bone: the reward currency icon
+export function bone(cls = '') {
+  const shape = (f, st, w) => `<g transform="rotate(-35 12 12)" fill="${f}" stroke="${st}" stroke-width="${w}"><rect x="5.5" y="9.6" width="13" height="4.8" rx="1.6"/><circle cx="5.6" cy="9.4" r="2.9"/><circle cx="5.6" cy="14.6" r="2.9"/><circle cx="18.4" cy="9.4" r="2.9"/><circle cx="18.4" cy="14.6" r="2.9"/></g>`;
+  return `<svg class="bone ${cls}" viewBox="0 0 24 24" aria-hidden="true" focusable="false">${shape('#8A5A2B', '#8A5A2B', 2.6)}${shape('#FFF4DC', 'none', 0)}<path d="M8.4 9.6 L14.8 5.4" stroke="#fff" stroke-width="1.3" stroke-linecap="round" opacity=".9"/></svg>`;
+}
 
 export function star(filled, cls = '') {
   return `<svg class="star ${filled ? 'on' : 'off'} ${cls}" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.5l2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 17.4l-5.9 3.1 1.2-6.5L2.5 9.4l6.6-.9z"/></svg>`;

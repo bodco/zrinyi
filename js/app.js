@@ -1,7 +1,8 @@
 import { STR, TOPICS, BADGE_ICONS, PARENTS } from './i18n.js';
 import * as store from './store.js';
 import * as L from './logic.js';
-import { owl, star } from './mascot.js';
+import * as R from './rewards.js';
+import { owl, archie, star, bone, setOutfit } from './mascot.js';
 
 const GRADES = [2, 3, 4, 5, 6, 7, 8];
 const LETTERS = ['A', 'B', 'C', 'D', 'E'];
@@ -45,6 +46,17 @@ const fmtDate = (iso, withTime) => {
   try { return new Intl.DateTimeFormat(S.lang === 'hu' ? 'hu-HU' : 'uk-UA', withTime ? { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' } : { month: 'short', day: 'numeric' }).format(new Date(iso)); }
   catch (e) { return iso.slice(0, 10); }
 };
+const blanketIcon = (cls = '') => `<svg class="blk ${cls}" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 6 Q12 3 21 6 L20 18 Q12 21 4 18 Z" fill="#7DD3FC" stroke="#1E5A8A" stroke-width="1.4" stroke-linejoin="round"/><path d="M8.5 5 L8 19.6 M15 4.9 L15.4 19.7 M3.6 11.5 Q12 9.5 20.5 11.5" stroke="#fff" stroke-width="1.7" fill="none"/><path d="M4.4 18.3 l-1 2 M8.5 19.5 l-.4 2 M12.5 19.8 v2 M16.5 19.4 l.5 2 M20 18.2 l1 2" stroke="#1E5A8A" stroke-width="1.2" stroke-linecap="round"/></svg>`;
+// daily goal ring; when `to` is given the ring animates from val to to after render
+const RING_R = 27, RING_C = 2 * Math.PI * RING_R;
+const ringOff = (v, goal) => (RING_C * (1 - Math.min(1, v / Math.max(1, goal)))).toFixed(1);
+function ringSVG(val, goal, to = null, cls = '') {
+  const done = (to == null ? val : to) >= goal;
+  return `<svg class="ring ${done && to == null ? 'done' : ''} ${cls}" viewBox="0 0 64 64" aria-hidden="true" focusable="false">
+    <circle cx="32" cy="32" r="${RING_R}" class="ring-bg"/>
+    <circle cx="32" cy="32" r="${RING_R}" class="ring-fg" stroke-dasharray="${RING_C.toFixed(1)}" style="stroke-dashoffset:${ringOff(val, goal)}" transform="rotate(-90 32 32)" ${to != null ? `data-off="${ringOff(to, goal)}" data-done="${done ? 1 : 0}"` : ''}/></svg>`;
+}
+const rankName = (n) => t('rankNames')[Math.min(n, t('rankNames').length) - 1];
 const starsRow = (n, cls = '') => `<span class="stars ${cls}" aria-label="${n}/3">${[1, 2, 3].map((i) => star(i <= n, `s${i}`)).join('')}</span>`;
 
 function route() {
@@ -179,7 +191,7 @@ function modalHTML() {
   if (!m) return '';
   let body = '';
   if (m.type === 'confirm') {
-    body = `${owl(m.mood || 'think', 'owl-md')}<h2 id="mt">${esc(m.title)}</h2><p>${esc(m.text)}</p>
+    body = `${m.outfit ? archie(m.mood || 'happy', 'owl-lg', m.outfit) : owl(m.mood || 'think', 'owl-md')}<h2 id="mt">${esc(m.title)}</h2><p>${esc(m.text)}</p>
       <div class="mbtns"><button class="btn ghost" data-act="modal-no">${esc(m.no)}</button><button class="btn ${m.danger ? 'danger' : 'primary'}" data-act="modal-yes">${esc(m.yes)}</button></div>`;
   } else if (m.type === 'nickname') {
     const gr = store.grade(m.g);
@@ -288,33 +300,75 @@ function comingSoon(g) {
 function screenHome(g) {
   const all = S.data[g];
   const gr = store.grade(g);
+  const rw = gr.rw;
   const sum = L.gradeSummary(gr);
   const mist = L.openMistakes(all, gr).length;
   const nch = L.challengeCount(all);
-  const say = mist ? t('homeSayMist', mist) : sum.streak >= 2 ? t('homeSayStreak', sum.streak) : sum.sessions ? t('homeSayBack') : t('homeSayNew');
+  const today = L.dayKey();
+  const tb = R.todayBones(rw, today);
+  const lv = L.rankOf(rw.earned);
   const act = gr.active && gr.active.ids.every((id) => S.byId[id]) ? gr.active : null;
   const done = act ? act.answers.filter((a, i) => i < act.idx || a).length : 0;
+  const goalOk = tb >= rw.goal;
+  const say = act && act.mode === 'full' ? t('homeSayFull') : mist ? t('homeSayMist', mist) : goalOk ? t('homeSayGoal') : sum.streak >= 2 ? t('homeSayStreak', sum.streak) : sum.sessions ? t('homeSayBack') : t('homeSayNew');
   const mm = L.mockMinutes(g);
+  const nPaper = Math.min(L.mockN(g), regOf(g).length);
+  const prot = L.streakProtected(gr, today);
+  const frozen = new Set(rw.frozen || []);
+  const wk = R.weekDays(today);
+  const actN = R.activeDaysThisWeek(rw, today);
+  const chestOpen = !!rw.chests[R.weekKey(today)];
+  const wd = t('weekdays');
   return `${topBar({ back: '#/', title: t('gradeN', g) })}
   <main class="wrap home">
     <section class="greet">
-      ${owl(mist ? 'point' : sum.streak >= 2 ? 'cheer' : 'wave', 'owl-lg bob')}
+      ${owl(mist ? 'point' : goalOk || sum.streak >= 2 ? 'cheer' : 'wave', 'owl-lg bob')}
       <div class="greet-txt">
         <h2 class="h-big">${esc(t('hello', gr.nickname))}</h2>
         <p class="greet-say">${esc(say)}</p>
         <button class="link" data-act="edit-name">✎ ${t('editName')}</button>
       </div>
     </section>
-    <section class="stats3" aria-label="stats">
-      <div class="stat"><b>${sum.sessions}</b><span>${t('statSessions')}</span></div>
-      <div class="stat"><b>${sum.acc == null ? '-' : pct(sum.acc)}</b><span>${t('statAccuracy')}</span></div>
-      <div class="stat"><b>${sum.streak}${sum.streak ? ' 🔥' : ''}</b><span>${t('statStreak')}</span></div>
+    <section class="rank" aria-label="${esc(t('levelN', lv.n))}">
+      <span class="lv-num" aria-hidden="true">${lv.n}</span>
+      <div class="rank-t">
+        <b>${esc(rankName(lv.n))}</b>
+        <span class="xpbar" role="progressbar" aria-valuemin="0" aria-valuemax="${lv.need || 1}" aria-valuenow="${lv.max ? 1 : lv.into}"><i style="width:${lv.max ? 100 : Math.round((lv.into / lv.need) * 100)}%"></i></span>
+        <small>${t('levelN', lv.n)} · ${lv.max ? t('maxLevel') : t('toNext', lv.into, lv.need)}</small>
+      </div>
+      <button class="bones-pill" data-act="nav" data-to="#/g/${g}/shop" aria-label="${esc(t('shopTitle'))}: ${esc(t('bonesN', rw.bones))}">${bone()}<b>${rw.bones}</b></button>
     </section>
-    ${sum.sessions ? `<p class="unaided">💡 <b>${sum.unaided}</b> ${t('unaided')}</p>` : ''}
+    <section class="today" aria-label="${t('todayGoal')}">
+      <div class="today-top">
+        <div class="ring-box">${ringSVG(tb, rw.goal)}<span class="ring-c">${goalOk ? '<b class="ok">✓</b>' : `<b>${tb}</b><small>/${rw.goal}</small>`}</span></div>
+        <div class="today-t">
+          <b>${t('todayGoal')}</b>
+          <small>${goalOk ? t('goalDone') : `${t('goalOf', tb, rw.goal)} · ${t('goalLeft', rw.goal - tb)}`}</small>
+          <span class="streak ${sum.streak ? 'on' : ''}"><span aria-hidden="true">🔥</span> ${esc(t('streakN', sum.streak))}</span>
+          ${prot ? `<span class="safe">${blanketIcon()} ${t('streakSafe')}</span>` : rw.freezes ? `<span class="safe">${blanketIcon()} ${t('blanketN', rw.freezes)}</span>` : ''}
+        </div>
+      </div>
+      <div class="week" aria-label="${t('weekTitle')}">
+        <ol class="wk-days">${wk.map((d, i) => {
+          const on = (rw.days[d] || 0) > 0, fz = !on && frozen.has(d);
+          return `<li class="${on ? 'on' : ''} ${fz ? 'fz' : ''} ${d === today ? 'now' : ''} ${d > today ? 'fut' : ''}"><i aria-hidden="true">${on ? '🔥' : fz ? blanketIcon() : ''}</i><small>${wd[i]}</small></li>`;
+        }).join('')}</ol>
+        <div class="chest ${chestOpen ? 'open' : ''}"><span aria-hidden="true">🎁</span><small>${chestOpen ? t('chestReady') : t('weekChest', Math.min(actN, R.CHEST_DAYS), R.CHEST_DAYS)}</small></div>
+      </div>
+    </section>
     ${act ? `<section class="resume">
       <div><b>${t('resumeTitle')}</b><span>${esc(t('modeNames')[act.mode])}${act.topic ? `: ${esc(topicName(act.topic))}` : ''}. ${t('resumeText', done, act.ids.length)}</span></div>
       <div class="row"><button class="btn ghost sm" data-act="discard">${t('discard')}</button><button class="btn primary sm" data-act="resume">${t('resume')}</button></div>
     </section>` : ''}
+    <section class="modes">
+      <button class="mode m-quick" data-act="start" data-mode="quick"><span class="mi" aria-hidden="true">⚡</span><span class="mt"><b>${t('modeQuick')}</b><small>${t('modeQuickSub')}</small></span><span class="go" aria-hidden="true">›</span></button>
+      <button class="mode m-full" data-act="start" data-mode="full"><span class="mi" aria-hidden="true">📝</span><span class="mt"><b>${t('modeFull')}</b><small>${t('modeFullSub', nPaper)}</small></span><span class="go" aria-hidden="true">›</span></button>
+      <button class="mode m-mock" data-act="nav" data-to="#/g/${g}/mock"><span class="mi" aria-hidden="true">🏆</span><span class="mt"><b>${t('modeMock')}</b><small>${t('modeMockSub', nPaper, mm)}</small></span></button>
+      ${nch ? `<button class="mode m-chal" data-act="start" data-mode="challenge"><span class="mi" aria-hidden="true">🚀</span><span class="mt"><b>${t('modeChallenge')}</b><small>${t('modeChallengeSub', nch)}</small></span></button>` : ''}
+      <button class="mode m-mist" data-act="start" data-mode="mistakes" ${mist ? '' : 'disabled'}><span class="mi" aria-hidden="true">🔧</span><span class="mt"><b>${t('modeMistakes')}</b><small>${t('modeMistakesSub', mist)}</small></span>${mist ? `<span class="badge-n">${mist}</span>` : ''}</button>
+      <button class="mode m-shop" data-act="nav" data-to="#/g/${g}/shop"><span class="mi" aria-hidden="true">${owl('happy', 'owl-mi')}</span><span class="mt"><b>${t('modeShop')}</b><small>${t('modeShopSub')}</small></span></button>
+      <button class="mode m-prog" data-act="nav" data-to="#/g/${g}/progress"><span class="mi" aria-hidden="true">📈</span><span class="mt"><b>${t('modeProgress')}</b><small>${t('modeProgressSub')}</small></span></button>
+    </section>
     <section class="levelsw" aria-label="${t('levelTitle')}">
       <span class="lv-t">${t('levelTitle')}</span>
       <div class="seg" role="group">${L.LEVELS.map((lv) => `<button type="button" data-act="level" data-lv="${lv}" aria-pressed="${L.levelOf(gr) === lv}">${t('level_' + lv)}</button>`).join('')}</div>
@@ -326,34 +380,49 @@ function screenHome(g) {
         <span class="sw" aria-hidden="true"><i></i></span>
       </button>
     </section>
-    <section class="modes">
-      <button class="mode m-quick" data-act="start" data-mode="quick"><span class="mi" aria-hidden="true">⚡</span><span class="mt"><b>${t('modeQuick')}</b><small>${t('modeQuickSub')}</small></span><span class="go" aria-hidden="true">›</span></button>
-      <button class="mode m-topics" data-act="nav" data-to="#/g/${g}/topics"><span class="mi" aria-hidden="true">🧭</span><span class="mt"><b>${t('modeTopics')}</b><small>${t('modeTopicsSub')}</small></span></button>
-      <button class="mode m-mock" data-act="nav" data-to="#/g/${g}/mock"><span class="mi" aria-hidden="true">🏆</span><span class="mt"><b>${t('modeMock')}</b><small>${t('modeMockSub', Math.min(L.mockN(g), regOf(g).length), mm)}</small></span></button>
-      ${nch ? `<button class="mode m-chal" data-act="start" data-mode="challenge"><span class="mi" aria-hidden="true">🚀</span><span class="mt"><b>${t('modeChallenge')}</b><small>${t('modeChallengeSub', nch)}</small></span></button>` : ''}
-      <button class="mode m-mist" data-act="start" data-mode="mistakes" ${mist ? '' : 'disabled'}><span class="mi" aria-hidden="true">🔧</span><span class="mt"><b>${t('modeMistakes')}</b><small>${t('modeMistakesSub', mist)}</small></span>${mist ? `<span class="badge-n">${mist}</span>` : ''}</button>
-      <button class="mode m-prog" data-act="nav" data-to="#/g/${g}/progress"><span class="mi" aria-hidden="true">📈</span><span class="mt"><b>${t('modeProgress')}</b><small>${t('modeProgressSub')}</small></span></button>
-    </section>
   </main>`;
 }
 
-function screenTopics(g) {
-  const all = S.data[g];
+function screenShop(g) {
   const gr = store.grade(g);
-  const m = L.topicMastery(L.regular(all), gr);
-  const keys = Object.keys(TOPICS).filter((k) => m[k]);
-  return `${topBar({ back: `#/g/${g}`, title: t('modeTopics') })}
-  <main class="wrap">
-    ${bubble(t('topicsTitle'), 'think')}
-    <div class="topics">${keys.map((k) => {
-      const e = m[k];
-      return `<button class="topic" data-act="start" data-mode="topic" data-topic="${k}">
-        <span class="ti" aria-hidden="true">${topicIcon(k)}</span>
-        <span class="tt"><b>${esc(topicName(k))}</b><small>${t('topicCount', e.total)}</small>
-        <span class="bar" aria-hidden="true"><i style="width:${e.pct == null ? 0 : Math.round(e.pct * 100)}%"></i></span>
-        <small class="tm">${e.pct == null ? t('notTried') : `${t('mastery')}: ${pct(e.pct)}`}</small></span>
-      </button>`;
-    }).join('')}</div>
+  const rw = gr.rw;
+  const cur = R.outfitFor(rw);
+  const names = t('items');
+  const card = (it) => {
+    const owned = rw.owned.includes(it.id);
+    const worn = rw.outfit[it.slot] === it.id;
+    const look = Object.assign({}, cur, { [it.slot]: it.slot === 'harness' ? it.color : it.id });
+    let btn;
+    if (worn && it.id === 'navy') btn = `<span class="worn-l">✓ ${t('wearing')}</span>`;
+    else if (worn) btn = `<button class="btn ghost sm" data-act="wear" data-id="${it.id}">${t('takeOff')}</button>`;
+    else if (owned) btn = `<button class="btn second sm" data-act="wear" data-id="${it.id}">${t('wear')}</button>`;
+    else if (rw.bones >= it.price) btn = `<button class="btn primary sm buy" data-act="buy" data-id="${it.id}" aria-label="${esc(names[it.id])}: ${esc(t('bonesN', it.price))}">${bone()} ${it.price}</button>`;
+    else btn = `<button class="btn ghost sm buy" disabled aria-label="${esc(names[it.id])}: ${esc(t('bonesN', it.price))}">${bone()} ${it.price}</button><small class="need">${t('needMore', it.price - rw.bones)}</small>`;
+    return `<li class="item ${worn ? 'worn' : ''} ${owned ? 'owned' : ''}">
+      ${worn && it.id !== 'navy' ? `<span class="item-tag">✓ ${t('wearing')}</span>` : ''}
+      <span class="item-prev">${archie('happy', 'owl-item', look)}</span>
+      <b>${esc(names[it.id])}</b>${btn}</li>`;
+  };
+  const canBlanket = rw.freezes < L.FREEZE_MAX;
+  return `${topBar({ back: `#/g/${g}`, title: t('shopTitle'), sub: gr.nickname ? `${gr.nickname}, ${t('gradeN', g)}` : t('gradeN', g) })}
+  <main class="wrap shop">
+    <section class="shop-hero">
+      ${owl('cheer', 'owl-hero pop')}
+      <div class="shop-hero-t">
+        <span class="bones-pill big" aria-label="${esc(t('bonesN', rw.bones))}">${bone()}<b>${rw.bones}</b></span>
+        <p>${esc(t('shopSay'))}</p>
+      </div>
+    </section>
+    ${R.SLOTS.map((slot) => `<section class="shelf"><h3>${t('slots')[slot]}</h3><ul class="items">${R.ITEMS.filter((it) => it.slot === slot).map(card).join('')}</ul></section>`).join('')}
+    <section class="shelf"><h3>${t('slots').extra}</h3>
+      <div class="blanket-card">
+        <span class="blk-big">${blanketIcon()}</span>
+        <div class="bc-t"><b>${t('blanketName')}</b><small>${t('blanketDesc')}</small><span class="bc-n">${blanketIcon('sm')} ${rw.freezes}/${L.FREEZE_MAX}</span></div>
+        ${!canBlanket ? `<span class="worn-l">${t('blanketMax')}</span>` : rw.bones >= R.BLANKET_PRICE
+          ? `<button class="btn primary sm buy" data-act="buy" data-id="blanket" aria-label="${esc(t('blanketName'))}: ${esc(t('bonesN', R.BLANKET_PRICE))}">${bone()} ${R.BLANKET_PRICE}</button>`
+          : `<div class="bc-b"><button class="btn ghost sm buy" disabled>${bone()} ${R.BLANKET_PRICE}</button><small class="need">${t('needMore', R.BLANKET_PRICE - rw.bones)}</small></div>`}
+      </div>
+    </section>
   </main>`;
 }
 
@@ -400,6 +469,8 @@ function screenQuiz(g) {
     const answered = s.answers.filter(Boolean).length;
     bar = `<div class="qprog"><div class="pbar"><i style="width:${(answered / n) * 100}%"></i></div></div>
       <button class="timer ${left < 60000 ? 'crit' : left < 300000 ? 'warn' : ''}" data-act="pause" aria-label="${t('pause')}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14M16 5v14"/></svg><span id="timer">${fmtTime(left)}</span></button>`;
+  } else if (n > 12) { // full training: a continuous bar, 25-30 steps do not fit on a phone
+    bar = `<div class="qprog"><div class="pbar" aria-hidden="true"><i style="width:${(s.idx / n) * 100}%"></i></div><span class="qcount">${s.idx + 1}/${n}</span></div>`;
   } else {
     const yb = band(g) === 'young';
     bar = `<div class="qprog"><ol class="steps" aria-label="${s.idx + 1}/${n}">${s.ids.map((_, i) => `<li class="${i < s.idx ? 'done' : i === s.idx ? 'cur' : ''}">${yb && i < s.idx ? star(true) : ''}</li>`).join('')}</ol><span class="qcount">${s.idx + 1}/${n}</span></div>`;
@@ -481,9 +552,10 @@ function screenResults(g, id) {
         <span class="rc bad">✗ ${rec.wrong} ${t('wrong')}</span>
         <span class="rc skip">⏭ ${rec.skipped} ${t('skipped')}</span>
       </div>
-      <p class="rmeta">⏱ ${t('timeSpent')}: ${fmtDur(rec.timeSec)}</p>
+      <p class="rmeta">⏱ ${t('timeSpent')}: ${fmtDur(rec.timeSec)}${rec.bones != null && !(S.rwFx && S.rwFx.sid === rec.id) ? ` · <span class="rbones">${bone()} ${esc(t('plusBones', rec.bones))}</span>` : ''}</p>
       ${cmp ? `<p class="rcmp">${cmp}</p>` : ''}
     </section>
+    ${rewardBlock(rec)}
     ${rsay && !chal ? bubble(esc(rsay), toReview ? 'point' : 'cheer', 'rsay') : ''}
     ${newB.length ? `<section class="newbadges"><h3>${t('newBadge')}</h3>${newB.map((b) => `<div class="nb"><span>${BADGE_ICONS[b]}</span><b>${esc(t('badgeDefs')[b][0])}</b></div>`).join('')}</section>` : ''}
     <div class="cta-col">
@@ -516,6 +588,53 @@ function screenResults(g, id) {
   </main>`;
 }
 
+function rewardBlock(rec) {
+  const fx = S.rwFx && S.rwFx.sid === rec.id ? S.rwFx : null;
+  if (!fx) return '';
+  const anim = !fx.animated && !reduceMotion();
+  const p = fx.parts || {};
+  const chips = [
+    p.correct ? `<span class="pc">✓ ${esc(t('partCorrect', fx.correct))} <b>+${p.correct}</b></span>` : '',
+    p.unaided ? `<span class="pc">💡 ${esc(t('partUnaided', fx.unaided))} <b>+${p.unaided}</b></span>` : '',
+    p.done ? `<span class="pc">🏁 ${esc(t('partDone'))} <b>+${p.done}</b></span>` : ''
+  ].join('');
+  const lvNow = L.rankOf(fx.earnedAfter);
+  return `<section class="reward" aria-label="${t('bonesTitle')}">
+    <div class="rw-row">
+      <div class="rw-count">${bone('bone-lg')}<div><b class="count" ${anim ? `data-to="${fx.n}"` : ''}>+${anim ? 0 : fx.n}</b><small>${t('bonesTitle')}</small></div></div>
+      <div class="rw-ring"><div class="ring-box">${anim ? ringSVG(fx.dayBefore, fx.goal, fx.dayAfter) : ringSVG(fx.dayAfter, fx.goal)}<span class="ring-c"><b>${Math.min(fx.dayAfter, 999)}</b><small>/${fx.goal}</small></span></div><small>${fx.dayAfter >= fx.goal ? t('goalDone') : t('todayGoal')}</small></div>
+    </div>
+    ${chips ? `<div class="rw-parts">${chips}</div>` : ''}
+    <div class="rw-lv"><span class="lv-num sm" aria-hidden="true">${lvNow.n}</span><span class="xpbar"><i style="width:${lvNow.max ? 100 : Math.round((lvNow.into / lvNow.need) * 100)}%"></i></span><small>${esc(rankName(lvNow.n))}</small></div>
+  </section>
+  ${fx.levelUp ? `<section class="levelup">${owl('cheer', 'owl-lg pop')}<div><h3>${t('levelUpTitle')}</h3><p>${esc(t('levelUpText', fx.levelUp, rankName(fx.levelUp)))}</p></div></section>` : ''}
+  ${fx.chest ? `<section class="chestcard"><span class="chest-ic" aria-hidden="true">🎁</span><div><h3>${t('chestTitle')}</h3><p>${esc(t('chestText', fx.chest))}</p></div></section>` : ''}
+  ${fx.freezeUsed ? `<p class="rinfo">${blanketIcon()} ${esc(t('freezeUsed', fx.freezeUsed))}</p>` : ''}
+  ${fx.freezeEarned ? `<p class="rinfo">${blanketIcon()} ${esc(t('freezeEarned'))}</p>` : ''}`;
+}
+// count-up and ring fill on the results screen, once per finished session
+function animateRewards() {
+  const fx = S.rwFx;
+  if (!fx || fx.animated) return;
+  const el = app.querySelector('.reward .count[data-to]');
+  const ring = app.querySelector('.reward .ring-fg[data-off]');
+  fx.animated = true;
+  if (!el && !ring) return;
+  if (ring) requestAnimationFrame(() => requestAnimationFrame(() => {
+    ring.style.stroke = ''; ring.style.strokeDashoffset = ring.dataset.off;
+    if (ring.dataset.done === '1') setTimeout(() => ring.closest('.ring') && ring.closest('.ring').classList.add('done'), 1100);
+  }));
+  if (el) {
+    const to = +el.dataset.to, t0 = performance.now(), dur = 900;
+    const step = (now) => {
+      const k = Math.min(1, (now - t0) / dur);
+      el.textContent = `+${Math.round(to * (1 - Math.pow(1 - k, 3)))}`;
+      if (k < 1 && el.isConnected) requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+  }
+}
+
 /* ---------- review ---------- */
 function initReview(g, sid, startAt) {
   const gr = store.grade(g);
@@ -524,7 +643,7 @@ function initReview(g, sid, startAt) {
   const list = rec.items.map((it, i) => ({ ...it, n: i + 1 })).filter((x) => !x.ok && S.byId[x.id]);
   let i = 0;
   if (startAt != null) { const k = list.findIndex((x) => x.n === +startAt + 1); if (k >= 0) i = k; }
-  S.rv = { g, sid: rec.id, list, i, solvedSelf: 0, solvedHints: 0, card: null, done: false };
+  S.rv = { g, sid: rec.id, list, i, solvedSelf: 0, solvedHints: 0, bones: 0, card: null, done: false };
   newCard();
   return S.rv;
 }
@@ -622,7 +741,7 @@ function reviewDone(g) {
     ${owl(x || z ? 'cheer' : 'happy', 'owl-hero pop')}
     <h1 class="h-big">${t('reviewDoneTitle')}</h1>
     <div class="bigscore"><b>${x}</b><span>/ ${y} ${t('reviewDoneSelf')}</span></div>
-    ${z ? `<div class="rchips"><span class="rc hint">💡 ${z} ${t('reviewDoneHints')}</span></div>` : ''}
+    ${z || rv.bones ? `<div class="rchips">${z ? `<span class="rc hint">💡 ${z} ${t('reviewDoneHints')}</span>` : ''}${rv.bones ? `<span class="rc bones">${bone()} ${esc(t('plusBones', rv.bones))}</span>` : ''}</div>` : ''}
     <p class="lead">${x ? t('reviewDoneText', x, y) : t('reviewDoneZero')}</p>
     ${bubble(esc(t('rvDoneSay')), 'cheer')}
     ${z ? `<p class="lead sm">${t('fixedWithHintsLine', z)}</p>` : ''}
@@ -661,11 +780,19 @@ function screenProgress(g) {
   return `${topBar({ back: `#/g/${g}`, title: t('progressTitle'), sub: gr.nickname ? `${gr.nickname}, ${t('gradeN', g)}` : t('gradeN', g) })}
   <main class="wrap progress">
     ${bubble(esc(t('progressSay', sum.sessions)), sum.sessions ? 'cheer' : 'think')}
-    <section class="stats3 four">
+    <section class="stats3 six">
       <div class="stat"><b>${sum.sessions}</b><span>${t('statSessions')}</span></div>
       <div class="stat"><b>${sum.acc == null ? '-' : pct(sum.acc)}</b><span>${t('statAccuracy')}</span></div>
-      <div class="stat"><b>${sum.streak}</b><span>${t('statStreak')}</span></div>
+      <div class="stat"><b>${sum.streak}${sum.streak ? ' 🔥' : ''}</b><span>${t('statStreak')}</span></div>
       <div class="stat"><b>${sum.bestMock >= 0 ? sum.bestMock : '-'}</b><span>${t('bestMock')}</span></div>
+      <div class="stat"><b>${gr.rw.earned}</b><span>${t('statBones')}</span></div>
+      <div class="stat"><b>${L.rankOf(gr.rw.earned).n}</b><span>${t('statLevel')}</span></div>
+    </section>
+    ${sum.sessions ? `<p class="unaided">💡 <b>${sum.unaided}</b> ${t('unaided')}</p>` : ''}
+    <section class="levelsw goalsw" aria-label="${t('goalTitle')}">
+      <span class="lv-t">🎯 ${t('goalTitle')}</span>
+      <div class="seg three" role="group">${R.GOALS.map((v) => `<button type="button" data-act="goal" data-v="${v}" aria-pressed="${gr.rw.goal === v}"><b>${v}</b> ${t('goalNames')[v]}</button>`).join('')}</div>
+      <small class="lv-d">${t('goalDesc')}</small>
     </section>
     <div class="pgrid">
       <section class="card">
@@ -710,6 +837,8 @@ function render() {
   }
   // a nickname prompt belongs to one grade's home screen; drop it when navigating elsewhere
   if (S.modal && S.modal.type === 'nickname' && (S.modal.g !== g || r.name !== 'home')) S.modal = null;
+  // Archie wears the outfit of the grade on screen (each sibling has their own); plain Archie elsewhere
+  setOutfit(g && store.hasGrade(g) ? R.outfitFor(store.grade(g).rw) : null);
   let html = '';
   if (r.name === 'start') html = screenStart();
   else if (r.name === 'parents') html = screenParents();
@@ -722,7 +851,7 @@ function render() {
       if (r.name === 'quiz' && !(gr.active && gr.active.ids.every((id) => S.byId[id]))) { setTimeout(() => go(`#/g/${g}`), 0); return; }
       if (r.name === 'quiz' && gr.active.paused && !S.modal) S.modal = { type: 'pause' };
       if (r.name === 'home') html = screenHome(g);
-      else if (r.name === 'topics') html = screenTopics(g);
+      else if (r.name === 'shop') html = screenShop(g);
       else if (r.name === 'mock') html = screenMockIntro(g);
       else if (r.name === 'quiz') html = screenQuiz(g);
       else if (r.name === 'results') html = screenResults(g, r.arg);
@@ -745,6 +874,7 @@ function render() {
     if (h && document.activeElement === document.body) { h.setAttribute('tabindex', '-1'); h.focus({ preventScroll: true }); }
   }
   S.keepScroll = false;
+  if (r.name === 'results') animateRewards();
   renderModal();
   manageTicker(r);
   const flashed = S.autoFlash;
@@ -764,11 +894,17 @@ function render() {
 }
 
 /* ---------------- quiz flow ---------------- */
-function startSession(mode, topic) {
+async function startSession(mode, topic) {
   const r = route();
   const g = r.g;
   const all = S.data[g];
   const gr = store.grade(g);
+  const old = gr.active && gr.active.ids.every((id) => S.byId[id]) ? gr.active : null;
+  if (old && (old.idx > 0 || old.answers.some(Boolean))) {
+    const done = old.answers.filter((a, i) => i < old.idx || a).length;
+    const ok = await confirmBox({ title: t('replaceTitle'), text: t('replaceText', t('modeNames')[old.mode], done, old.ids.length), yes: t('replaceYes'), no: t('cancel'), mood: 'think' });
+    if (!ok || route().g !== g) return;
+  }
   const probs = L.selectProblems(all, gr, mode, topic);
   if (!probs.length) { toast(esc(t('modeMistakesSub', 0)), 2500, 'think'); go(`#/g/${g}`); return; }
   gr.active = L.newSession(g, mode, topic, probs);
@@ -805,14 +941,17 @@ function finishQuiz(timeUp) {
   if (!s) return;
   tickNow();
   const topicsInData = [...new Set(regOf(g).map((p) => p.topic))];
-  const { record, newBadges } = L.finishSession(gr, s, S.byId, topicsInData);
+  const { record, newBadges, streakRes } = L.finishSession(gr, s, S.byId, topicsInData);
+  const fx = R.awardSession(gr, record, streakRes);
+  const more = L.checkBadges(gr, S.byId, topicsInData); // badges tied to bones, levels and the chest
   store.save();
-  S.newBadges = { sid: record.id, ids: newBadges };
+  S.newBadges = { sid: record.id, ids: newBadges.concat(more) };
+  S.rwFx = Object.assign({ sid: record.id, animated: false }, fx);
   S.modal = null;
   S.rv = null;
   go(`#/g/${g}/results/${record.id}`);
   if (timeUp) toast(t('timeUp'), 3000, 'oops');
-  if (L.starsOf(record.acc) >= 2) setTimeout(() => confetti(), 250);
+  if (L.starsOf(record.acc) >= 2 || fx.levelUp || fx.chest) setTimeout(() => confetti(), 250);
 }
 
 function tickNow() {
@@ -1025,6 +1164,13 @@ const A = {
   skip() { if (locked()) return; const s = activeSess(); s.answers[s.idx] = null; advance(); },
   async quit() {
     const s = activeSess();
+    if (s && s.mode === 'full') {
+      const keep = await confirmBox({ title: t('quitFullTitle'), text: t('quitFullText'), yes: t('quitFullYes'), no: t('stay'), mood: 'sleep' });
+      if (!keep) return;
+      tickNow(); S.sel = null; store.save();
+      go(`#/g/${route().g}`);
+      return;
+    }
     const ok = await confirmBox({ title: t('quitTitle'), text: t('quitText'), yes: t('leave'), no: t('stay'), mood: 'oops', danger: true });
     if (!ok) return;
     const g = route().g;
@@ -1075,7 +1221,16 @@ const A = {
       if (c.hl) rv.solvedHints++; else rv.solvedSelf++;
       const gr = store.grade(rv.g);
       const st = gr.problemStats[it.id];
-      if (st && st.wrong > 0) { L.markFixed(gr, it.id); L.checkBadges(gr, S.byId, [...new Set(regOf(rv.g).map((q) => q.topic))]); store.save(); }
+      if (st && st.wrong > 0) L.markFixed(gr, it.id);
+      const rec = sessionById(gr, rv.sid);
+      const got = R.awardReviewFix(gr, rec && rec.items ? rec.items[it.n - 1] : null, !!c.hl);
+      L.checkBadges(gr, S.byId, [...new Set(regOf(rv.g).map((q) => q.topic))]);
+      store.save();
+      if (got) {
+        rv.bones += got.n + got.chest;
+        const msg = got.levelUp ? `${t('levelUpTitle')} ${rankName(got.levelUp)}` : got.goalHit ? t('goalHitToast') : got.chest ? t('chestTitle') : t('plusBones', got.n);
+        setTimeout(() => toast(`${bone()} ${esc(msg)}`, 2200, 'cheer'), 60);
+      }
       confetti(40);
     } else {
       c.tried.push(c.sel);
@@ -1102,6 +1257,25 @@ const A = {
     newCard();
     render();
   },
+  goal(el) { const gr = store.grade(route().g); gr.rw.goal = +el.dataset.v; store.save(); S.keepScroll = true; render(); },
+  // wardrobe
+  async buy(el) {
+    const g = route().g;
+    const gr = store.grade(g);
+    const id = el.dataset.id;
+    const it = R.itemById(id);
+    const price = id === 'blanket' ? R.BLANKET_PRICE : it.price;
+    const name = id === 'blanket' ? t('blanketName') : t('items')[id];
+    const look = it ? Object.assign({}, R.outfitFor(gr.rw), { [it.slot]: it.slot === 'harness' ? it.color : id }) : null;
+    const ok = await confirmBox({ title: t('buyTitle', name), text: t('buyText', price, gr.rw.bones - price), yes: t('buyYes'), no: t('cancel'), mood: 'happy', outfit: look });
+    if (!ok || !R.buy(gr, id)) return;
+    store.save();
+    S.keepScroll = true;
+    render();
+    confetti(40);
+    toast(esc(t('bought')), 2200, 'cheer');
+  },
+  wear(el) { const gr = store.grade(route().g); if (R.toggleWear(gr, el.dataset.id)) { store.save(); S.keepScroll = true; render(); } },
   // progress
   export() {
     const data = JSON.stringify(store.exportData(), null, 1);

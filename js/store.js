@@ -1,5 +1,6 @@
 // Persistent state in localStorage key "zrinyi.v1". All access wrapped in try/catch;
 // falls back to in-memory state if storage is unavailable.
+import { ensureRw } from './rewards.js';
 const KEY = 'zrinyi.v1';
 const MAX_SESSIONS = 200;
 const KEEP_ITEMS = 30; // keep per-problem details only for the most recent sessions
@@ -11,7 +12,7 @@ function blank() {
 }
 
 export function blankGrade() {
-  return { nickname: '', asked: false, sessions: [], problemStats: {}, badges: [], streak: { last: null, count: 0 }, fixedTotal: 0, active: null };
+  return { nickname: '', asked: false, sessions: [], problemStats: {}, badges: [], streak: { last: null, count: 0 }, fixedTotal: 0, active: null, rw: null };
 }
 
 export function load() {
@@ -45,6 +46,9 @@ export function grade(g) {
   // fill missing fields from older versions
   const b = blankGrade();
   for (const f in b) if (gr[f] === undefined) gr[f] = b[f];
+  const migrating = !gr.rw && gr.sessions.length > 0;
+  ensureRw(gr, g); // rewards (bones, goal, wardrobe); migrates older saves once
+  if (migrating) save();
   return gr;
 }
 
@@ -62,7 +66,7 @@ export function resetGrade(g) {
 
 export function exportData() {
   const s = load();
-  return { app: 'zrinyi-gyakorlo', version: 1, exported: new Date().toISOString(), grades: s.grades };
+  return { app: 'zrinyi-gyakorlo', version: 2, exported: new Date().toISOString(), grades: s.grades };
 }
 
 export function parseImport(obj) {
@@ -71,6 +75,7 @@ export function parseImport(obj) {
   for (const [k, v] of Object.entries(obj.grades)) {
     if (!/^[2-8]$/.test(k) || !v || !Array.isArray(v.sessions) || typeof v.problemStats !== 'object') continue;
     out[k] = Object.assign(blankGrade(), v, { active: null });
+    ensureRw(out[k], k); // files from older versions get their starting bones; broken reward fields are repaired
   }
   return Object.keys(out).length ? out : null;
 }

@@ -132,6 +132,10 @@ export const STR = {
     hintAssisted: 'tippel oldottad meg',
     archieSays: 'Archie',
     modeChallenge: 'Kihívás',
+    autoTitle: 'Automatikus tippek',
+    autoDesc_on: 'Ha egy ideig nem válaszolsz, Archie magától megmutatja a következő tippet.',
+    autoDesc_off: 'Kikapcsolva: tippet csak a Segítség gombbal kaphatsz.',
+    autoSay: 'Segítek egy kicsit!',
     levelTitle: 'Gyakorlás szintje',
     level_contest: 'Mint a versenyen',
     level_easy: 'Könnyebb',
@@ -359,6 +363,10 @@ export const STR = {
     hintAssisted: 'розвʼязано з підказкою',
     archieSays: 'Арчі',
     modeChallenge: 'Виклик',
+    autoTitle: 'Автоматичні підказки',
+    autoDesc_on: 'Якщо ти якийсь час не відповідаєш, Арчі сам покаже наступну підказку.',
+    autoDesc_off: 'Вимкнено: підказку можна отримати лише кнопкою Підказка.',
+    autoSay: 'Трохи підкажу!',
     levelTitle: 'Рівень тренування',
     level_contest: 'Як на конкурсі',
     level_easy: 'Легше',
@@ -505,6 +513,7 @@ export const PARENTS = {
     <li><b>Próbaverseny:</b> 25 (7-8. osztályban 30) feladat könnyűtől a nehézig, valódi időkorláttal és pontozással. Megállítható.</li>
     <li><b>Hibák javítása:</b> a legfontosabb rész. Minden hibánál előbb elmagyarázzuk, miért választhatta a gyerek azt a választ, adunk egy rávezető kérdést, és még egyszer megpróbálhatja. Csak ezután jön a lépésenkénti megoldás.</li>
     <li><b>Segítség (tippek):</b> gyakorláskor és javításkor minden feladatnál kérhet a gyerek tippet. A tippek szintenként nyílnak: az első csak egy apró terelés, az utolsó már részletes, de a választ soha nem árulja el. A próbaversenyen nincs tipp. Ha helyesen válaszolt tipp után, az eredmény helyes, de 💡 jelzi, hogy segítséggel ment. A javításnál a "magadtól" csak az, amit tippek nélkül sikerült kijavítani.</li>
+    <li><b>Automatikus tippek és szint:</b> ha a gyerek egy ideig nem válaszol, a következő tipp magától kinyílik; a várakozás a feladat nehézségétől és az osztálytól függ, és tippről tippre nő (a próbaversenyen soha). Ez, valamint a gyakorlás szintje ("Mint a versenyen" vagy "Könnyebb") az osztály kezdőoldalán állítható.</li>
     <li><b>Archie:</b> a kis Jack Russell terrier végig a gyerek mellett van, bátorít, és gondolkodik vele. Gyakorláskor nem árulja el, jó-e a válasz, az eredmény a kör végén jön.</li>
     <li><b>Kihívások:</b> ha a kör könnyűnek tűnik, a nehezebb versenyfeladatokból is lehet gyakorolni (időkorlát nélkül). Ezek nem kerülnek a többi körbe.</li>
     <li>Tipp: 10-15 perc naponta többet ér, mint egy hosszú hétvégi alkalom. Üljön le mellé, és kérje meg, hogy hangosan gondolkodjon!</li>
@@ -537,6 +546,7 @@ export const PARENTS = {
     <li><b>Пробний конкурс:</b> 25 (у 7-8 класі 30) задач від легких до складних, зі справжнім часом і балами. Можна поставити на паузу.</li>
     <li><b>Робота над помилками:</b> найважливіша частина. Для кожної помилки спершу пояснюємо, чому дитина могла обрати цю відповідь, даємо навідне питання і ще одну спробу. Лише потім показуємо розвʼязок крок за кроком.</li>
     <li><b>Підказки:</b> під час тренування і роботи над помилками до кожної задачі можна попросити підказку. Підказки відкриваються рівнями: перша лише легенько спрямовує, остання вже детальна, але відповідь не розкриває ніколи. У пробному конкурсі підказок немає. Якщо дитина відповіла правильно після підказки, результат зараховується, а значок 💡 показує, що вона була з допомогою. У роботі над помилками "сам" означає лише те, що виправлено без підказок.</li>
+    <li><b>Автоматичні підказки й рівень:</b> якщо дитина якийсь час не відповідає, наступна підказка відкривається сама; час очікування залежить від складності задачі й класу та зростає від підказки до підказки (у пробному конкурсі ніколи). Це, а також рівень тренування ("Як на конкурсі" чи "Легше"), налаштовується на головній сторінці класу.</li>
     <li><b>Арчі:</b> маленький джек-рассел-терʼєр увесь час поруч із дитиною, підбадьорює і думає разом із нею. Під час тренування він не підказує, чи правильна відповідь, результат буде наприкінці кола.</li>
     <li><b>Виклики:</b> якщо коло здається легким, можна потренуватися на складніших конкурсних задачах (без таймера). Вони не потрапляють в інші кола.</li>
     <li>Порада: 10-15 хвилин щодня дають більше, ніж одне довге заняття у вихідні. Сядьте поруч і попросіть дитину міркувати вголос!</li>

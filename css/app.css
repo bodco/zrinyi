@@ -628,3 +628,23 @@ body.scr-quiz #toast-root { bottom: auto; top: calc(66px + var(--safe-t)); }
 .levelsw .seg button { min-height: 44px; border: 0; border-radius: 999px; background: transparent; font: inherit; font-weight: 800; font-size: 15px; color: var(--ink2); cursor: pointer; }
 .levelsw .seg button[aria-pressed="true"] { background: var(--primary); color: var(--on-primary); }
 .levelsw .lv-d { font-size: 13px; color: var(--ink2); line-height: 1.35; }
+
+/* ---------- v5: automatic hints ---------- */
+.autosw { margin: -6px 0 14px; }
+.sw-row { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 56px; padding: 10px 12px; text-align: left; background: var(--surface); border: 2px solid var(--line); border-radius: 16px; font: inherit; color: inherit; cursor: pointer; }
+.sw-t { flex: 1; min-width: 0; display: grid; gap: 2px; }
+.sw-t b { font-weight: 800; font-size: 14px; color: var(--ink2); }
+.sw-t small { font-size: 13px; color: var(--ink2); line-height: 1.35; }
+.sw { flex: none; position: relative; width: 52px; height: 32px; border-radius: 999px; background: color-mix(in srgb, var(--line) 90%, #888); transition: background .2s; }
+.sw i { position: absolute; top: 3px; left: 3px; width: 26px; height: 26px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0, 0, 0, .25); transition: transform .2s; }
+.sw-row[aria-checked="true"] .sw { background: var(--primary); }
+.sw-row[aria-checked="true"] .sw i { transform: translateX(20px); }
+.sw-row:focus-visible { outline: 3px solid var(--primary); outline-offset: 2px; }
+.hb.auto-new { border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 30%, transparent); animation: enter .25s ease-out both, autoglow 1.2s ease-in-out .25s 2; }
+@keyframes autoglow { 50% { box-shadow: 0 0 0 7px color-mix(in srgb, var(--accent) 12%, transparent); background: color-mix(in srgb, var(--accent) 16%, #fff); } }
+.hintbtn.nudge { animation: nudge .6s ease-in-out 3; border-color: var(--accent); }
+.hintbtn.nudge .hcount { background: var(--accent); color: #fff; }
+@keyframes nudge { 50% { transform: scale(1.04); box-shadow: 0 0 0 5px color-mix(in srgb, var(--accent) 25%, transparent); } }
+@media (prefers-reduced-motion: reduce) {
+  .hb.auto-new, .hintbtn.nudge { animation: none !important; }
+}

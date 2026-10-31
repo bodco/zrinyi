@@ -25,7 +25,9 @@ const S = {
   lastTick: 0,
   cheerIdx: -1,
   cheerText: '',
-  hintLock: 0
+  hintLock: 0,
+  autoSaid: null, // {key, level}: Archie's line after an automatic hint
+  autoFlash: null // {key, level}: one-shot highlight of the hint that just opened by itself
 };
 const regOf = (g) => L.regular(S.data[g]);
 
@@ -103,10 +105,10 @@ function bubble(html, mood = 'happy', cls = '') {
 }
 
 // stack of opened hint levels (earlier levels stay visible), numbered "1/4", "2/4" ...
-function hintStack(list, opened) {
+function hintStack(list, opened, flash = false) {
   if (!opened) return '';
   const n = list.length;
-  return `<div class="hstack" role="list">${list.slice(0, opened).map((h, i) => `<div class="hb" role="listitem" ${i === opened - 1 ? 'data-focus' : ''}>
+  return `<div class="hstack" role="list">${list.slice(0, opened).map((h, i) => `<div class="hb${flash && i === opened - 1 ? ' auto-new' : ''}" role="listitem" ${i === opened - 1 ? 'data-focus' : ''}>
     <span class="hb-ic" aria-hidden="true">${owl(i === opened - 1 ? 'think' : 'happy', 'owl-xs')}</span>
     <div class="hb-t"><small aria-label="${esc(t('hintLevelAria', i + 1, n))}"><span class="hnum">${t('hintLevel', i + 1, n)}</span></small><p>${esc(h)}</p></div></div>`).join('')}</div>`;
 }
@@ -119,6 +121,7 @@ function hintButton(total, opened, act) {
 function coachFor(s, opened, total) {
   const mock = s.mode === 'mock';
   if (mock) return { mood: s.idx === 0 ? 'wave' : 'happy', text: s.idx === 0 ? t('coachMock') : '' };
+  if (opened > 0 && S.autoSaid && S.autoSaid.key === ahKeyQuiz(s) && S.autoSaid.level === opened) return { mood: 'think', text: t('autoSay') };
   if (opened > 0) {
     const arr = t('coachHint');
     return { mood: 'think', text: arr[Math.min(opened >= total ? 3 : opened - 1, arr.length - 1)] };
@@ -203,6 +206,7 @@ function renderModal() {
   document.body.classList.toggle('modal-open', !!S.modal);
   const f = modalRoot.querySelector('input, .btn.primary');
   if (f) setTimeout(() => f.focus({ preventScroll: true }), 30);
+  syncAutoHint();
 }
 function confirmBox(opts) {
   return new Promise((res) => { openModal(Object.assign({ type: 'confirm' }, opts, { resolve: res })); });
@@ -316,6 +320,12 @@ function screenHome(g) {
       <div class="seg" role="group">${L.LEVELS.map((lv) => `<button type="button" data-act="level" data-lv="${lv}" aria-pressed="${L.levelOf(gr) === lv}">${t('level_' + lv)}</button>`).join('')}</div>
       <small class="lv-d">${t('levelDesc_' + L.levelOf(gr))}</small>
     </section>
+    <section class="autosw">
+      <button type="button" class="sw-row" role="switch" aria-checked="${autoOn(gr)}" data-act="autohints">
+        <span class="sw-t"><b>💡 ${t('autoTitle')}</b><small>${t(autoOn(gr) ? 'autoDesc_on' : 'autoDesc_off')}</small></span>
+        <span class="sw" aria-hidden="true"><i></i></span>
+      </button>
+    </section>
     <section class="modes">
       <button class="mode m-quick" data-act="start" data-mode="quick"><span class="mi" aria-hidden="true">⚡</span><span class="mt"><b>${t('modeQuick')}</b><small>${t('modeQuickSub')}</small></span><span class="go" aria-hidden="true">›</span></button>
       <button class="mode m-topics" data-act="nav" data-to="#/g/${g}/topics"><span class="mi" aria-hidden="true">🧭</span><span class="mt"><b>${t('modeTopics')}</b><small>${t('modeTopicsSub')}</small></span></button>
@@ -408,7 +418,7 @@ function screenQuiz(g) {
   if (!s.hints) s.hints = s.ids.map(() => 0);
   const hl = hintList(p);
   const opened = Math.min(s.hints[s.idx] || 0, hl.length);
-  const hintBlock = mock ? '' : `${hintStack(hl, opened)}${hintButton(hl.length, opened, 'hint')}`;
+  const hintBlock = mock ? '' : `${hintStack(hl, opened, isFlash(ahKeyQuiz(s), opened))}${hintButton(hl.length, opened, 'hint')}`;
   const coach = coachHTML(coachFor(s, opened, hl.length), s);
   const dbg = S.debug ? `<div class="debug"><button data-act="dbg-fill">DEBUG: auto-fill + finish</button>${mock ? '<button data-act="dbg-timeup">DEBUG: time up</button>' : ''}</div>` : '';
   return `<header class="top qbar">
@@ -547,8 +557,10 @@ function screenReview(g, sid, startAt) {
   // hint ladder: stepwise tips, never the answer; the solution flow below stays as it was
   const ladder = L.hintList(p, S.lang, false);
   if (ladder.length && c.status === 'trying') {
-    if (c.hl < ladder.length) parts.push(bubble(esc(c.hl ? t('rvTogether2') : t('rvTogether')), c.hl ? 'think' : 'point', 'together'));
-    parts.push(hintStack(ladder, c.hl));
+    const rk = ahKeyReview(rv);
+    const autoLine = c.hl && S.autoSaid && S.autoSaid.key === rk && S.autoSaid.level === c.hl;
+    if (c.hl < ladder.length || autoLine) parts.push(bubble(esc(autoLine ? t('autoSay') : c.hl ? t('rvTogether2') : t('rvTogether')), c.hl ? 'think' : 'point', 'together'));
+    parts.push(hintStack(ladder, c.hl, isFlash(rk, c.hl)));
     parts.push(hintButton(ladder.length, c.hl, 'rv-hint'));
   } else if (ladder.length && c.hl) {
     parts.push(hintStack(ladder, c.hl));
@@ -735,6 +747,9 @@ function render() {
   S.keepScroll = false;
   renderModal();
   manageTicker(r);
+  const flashed = S.autoFlash;
+  S.autoFlash = null;
+  if (flashed) afterAutoHint();
   const f = app.querySelectorAll('[data-focus]');
   if (S.scrollToFocus && f.length) {
     S.scrollToFocus = false;
@@ -770,6 +785,7 @@ function advance() {
   const s = activeSess();
   s.idx++;
   S.sel = null;
+  S.hintLock = 0; // the double-tap guard belongs to the previous problem
   S.lockUntil = Date.now() + 380;
   if (s.idx >= s.ids.length) { s.idx = s.ids.length - 1; finishQuiz(); return; }
   store.save();
@@ -831,6 +847,125 @@ function manageTicker(r) {
   }, 1000);
 }
 
+/* ---------------- automatic hints ---------------- */
+// Timer state lives outside render, keyed by session + problem, so re-renders (e.g. language switch)
+// neither reset nor duplicate it. One timer at most; it pauses while the tab is hidden or a modal is open.
+const autoOn = (gr) => gr.autoHints !== false;
+const AH_SCALE = S.debug ? 0.01 : 1; // ?debug: 100x faster for testing
+let AH = null; // {key, opened, remaining, deadline, tid, restart}
+const ahKeyQuiz = (s) => `q:${s.grade}:${s.started}:${s.idx}`;
+const ahKeyReview = (rv) => `r:${rv.g}:${rv.sid}:${rv.i}`;
+const isFlash = (key, level) => !!(S.autoFlash && S.autoFlash.key === key && S.autoFlash.level === level);
+
+function openQuizHint() {
+  const s = activeSess();
+  if (!s || s.mode === 'mock') return false;
+  if (!s.hints) s.hints = s.ids.map(() => 0);
+  const total = hintList(S.byId[s.ids[s.idx]]).length;
+  if ((s.hints[s.idx] || 0) >= total) return false;
+  s.hints[s.idx] = (s.hints[s.idx] || 0) + 1;
+  store.save();
+  return true;
+}
+function openReviewHint() {
+  const rv = S.rv;
+  if (!rv || rv.done) return false;
+  const c = rv.card, it = rv.list[rv.i], p = S.byId[it.id];
+  if (c.status !== 'trying' || c.hl >= L.hintList(p, S.lang, false).length) return false;
+  c.hl++;
+  const gr = store.grade(rv.g);
+  const st = gr.problemStats[it.id];
+  if (st) st.hintsUsed = (st.hintsUsed || 0) + 1;
+  const rec = sessionById(gr, rv.sid);
+  const item = rec && rec.items && rec.items.find((x) => x.id === it.id);
+  if (item) item.rh = c.hl;
+  store.save();
+  return true;
+}
+
+// what the auto-hint timer should be doing right now, or null when it must not run
+function ahContext() {
+  const r = route();
+  if (!r.g || !Array.isArray(S.data[r.g])) return null;
+  const gr = store.grade(r.g);
+  if (!autoOn(gr)) return null;
+  if (r.name === 'quiz') {
+    const s = gr.active;
+    if (!s || s.mode === 'mock' || !s.ids.every((id) => S.byId[id])) return null;
+    const p = S.byId[s.ids[s.idx]];
+    const total = hintList(p).length;
+    const opened = Math.min((s.hints && s.hints[s.idx]) || 0, total);
+    return { key: ahKeyQuiz(s), opened, total, delays: L.autoHintDelays(p, r.g, 'quiz'), open: openQuizHint };
+  }
+  if (r.name === 'review') {
+    const rv = S.rv;
+    if (!rv || rv.g !== r.g || rv.done || !rv.list.length || !rv.card || rv.card.status !== 'trying') return null;
+    const p = S.byId[rv.list[rv.i].id];
+    const total = L.hintList(p, S.lang, false).length;
+    return { key: ahKeyReview(rv), opened: Math.min(rv.card.hl, total), total, delays: L.autoHintDelays(p, r.g, 'review'), open: openReviewHint };
+  }
+  return null;
+}
+function ahStop() {
+  if (AH && AH.tid) { clearTimeout(AH.tid); AH.tid = null; AH.remaining = Math.max(0, AH.deadline - Date.now()); }
+}
+function syncAutoHint() {
+  const ctx = ahContext();
+  if (!ctx || ctx.opened >= ctx.total) { ahStop(); AH = null; return; }
+  const gap = Math.max(50, Math.round((ctx.delays[ctx.opened] || 60000) * AH_SCALE));
+  if (!AH || AH.key !== ctx.key) { ahStop(); AH = { key: ctx.key, opened: ctx.opened, remaining: gap, deadline: 0, tid: null }; }
+  else if (AH.opened !== ctx.opened || AH.restart) { ahStop(); AH.opened = ctx.opened; AH.remaining = gap; }
+  AH.restart = false;
+  const paused = document.hidden || !!S.modal;
+  if (paused) { ahStop(); return; }
+  if (!AH.tid) {
+    AH.deadline = Date.now() + AH.remaining;
+    AH.tid = setTimeout(ahFire, AH.remaining);
+  }
+}
+// the child is actively working (picked an option, or tried again): start the current gap over
+function ahRestartGap() { if (AH) { ahStop(); AH.restart = true; } syncAutoHint(); }
+function ahFire() {
+  if (!AH) return;
+  AH.tid = null;
+  const ctx = ahContext();
+  if (!ctx || ctx.key !== AH.key || ctx.opened !== AH.opened || ctx.opened >= ctx.total) { syncAutoHint(); return; }
+  if (document.hidden || S.modal) { AH.remaining = 0; return; }
+  if (!ctx.open()) { syncAutoHint(); return; }
+  const level = ctx.opened + 1;
+  S.hintLock = Date.now() + 600; // a tap landing at the same moment must not open a second level
+  S.autoSaid = { key: ctx.key, level };
+  S.autoFlash = { key: ctx.key, level };
+  S.keepScroll = true;
+  render(); // render re-syncs: the next gap starts now
+}
+// show the hint that just opened without pulling the answer buttons out of reach
+function afterAutoHint() {
+  const hbs = app.querySelectorAll('.hb.auto-new');
+  const el = hbs[hbs.length - 1];
+  if (!el) return;
+  const btn = app.querySelector('.hintbtn');
+  const nudge = () => {
+    if (!btn) return;
+    btn.classList.remove('nudge'); void btn.offsetWidth; btn.classList.add('nudge');
+    setTimeout(() => btn.classList.remove('nudge'), 2600);
+  };
+  const bar = document.querySelector('.actionbar');
+  const top = (document.querySelector('.top') || {}).offsetHeight || 0;
+  const limit = window.innerHeight - (bar ? bar.offsetHeight : 0) - 8;
+  const rect = el.getBoundingClientRect();
+  if (rect.top >= top && rect.bottom <= limit) return; // already in view
+  const small = window.innerHeight < 700 || window.innerWidth < 480;
+  if (small) { nudge(); return; }
+  const delta = rect.bottom > limit ? rect.bottom - limit : rect.top - top - 8;
+  const opts = app.querySelector('.opts');
+  if (opts) {
+    const o = opts.getBoundingClientRect();
+    if (o.top - delta > limit - 60 || o.bottom - delta < top + 60) { nudge(); return; } // options would leave the screen
+  }
+  window.scrollBy({ top: delta, behavior: reduceMotion() ? 'auto' : 'smooth' });
+}
+
 /* ---------------- actions ---------------- */
 const A = {
   nav(el) { go(el.dataset.to); },
@@ -842,31 +977,23 @@ const A = {
   start(el) { startSession(el.dataset.mode, el.dataset.topic); },
   hint() {
     if (Date.now() < S.hintLock) return;
-    const s = activeSess();
-    if (!s || s.mode === 'mock') return;
-    if (!s.hints) s.hints = s.ids.map(() => 0);
-    const total = hintList(S.byId[s.ids[s.idx]]).length;
-    if (s.hints[s.idx] >= total) return;
-    s.hints[s.idx]++;
+    if (!openQuizHint()) return;
     S.hintLock = Date.now() + 300;
-    store.save();
     S.keepScroll = true; S.scrollToFocus = true;
     render();
   },
   'rv-hint'() {
     if (Date.now() < S.hintLock) return;
-    const rv = S.rv, c = rv.card, it = rv.list[rv.i], p = S.byId[it.id];
-    if (c.status !== 'trying' || c.hl >= L.hintList(p, S.lang, false).length) return;
-    c.hl++;
+    if (!openReviewHint()) return;
     S.hintLock = Date.now() + 300;
-    const gr = store.grade(rv.g);
-    const st = gr.problemStats[it.id];
-    if (st) st.hintsUsed = (st.hintsUsed || 0) + 1;
-    const rec = sessionById(gr, rv.sid);
-    const item = rec && rec.items && rec.items.find((x) => x.id === it.id);
-    if (item) item.rh = c.hl;
-    store.save();
     S.keepScroll = true; S.scrollToFocus = true;
+    render();
+  },
+  autohints() {
+    const gr = store.grade(route().g);
+    gr.autoHints = !autoOn(gr);
+    store.save();
+    S.keepScroll = true;
     render();
   },
   'rv-giveup'() {
@@ -890,7 +1017,7 @@ const A = {
     const s = activeSess();
     const l = el.dataset.l;
     if (s.mode === 'mock') { s.answers[s.idx] = l; store.save(); }
-    else S.sel = l;
+    else { S.sel = l; ahRestartGap(); }
     S.keepScroll = true;
     render();
   },
@@ -937,7 +1064,7 @@ const A = {
   },
   'dbg-timeup'() { const s = activeSess(); s.elapsed = s.limit - 3000; },
   // review
-  'rv-opt'(el) { if (locked()) return; const c = S.rv.card; if (c.status !== 'trying' || c.tried.includes(el.dataset.l)) return; c.sel = el.dataset.l; S.keepScroll = true; render(); },
+  'rv-opt'(el) { if (locked()) return; const c = S.rv.card; if (c.status !== 'trying' || c.tried.includes(el.dataset.l)) return; c.sel = el.dataset.l; ahRestartGap(); S.keepScroll = true; render(); },
   'rv-check'() {
     if (locked()) return;
     const rv = S.rv, c = rv.card, it = rv.list[rv.i], p = S.byId[it.id];
@@ -953,6 +1080,7 @@ const A = {
     } else {
       c.tried.push(c.sel);
       if (c.tried.length >= 2) { c.status = 'failed'; c.showSol = true; c.steps = 1; }
+      else ahRestartGap();
     }
     c.sel = null;
     S.keepScroll = true; S.scrollToFocus = true;
@@ -970,6 +1098,7 @@ const A = {
     S.lockUntil = Date.now() + 400;
     if (rv.i >= rv.list.length - 1) { rv.done = true; render(); if (rv.solvedSelf) confetti(); return; }
     rv.i++;
+    S.hintLock = 0;
     newCard();
     render();
   },
@@ -1048,7 +1177,7 @@ document.addEventListener('keydown', (ev) => {
 });
 
 window.addEventListener('hashchange', () => { S.rv = null; render(); });
-document.addEventListener('visibilitychange', () => { if (document.hidden && route().name === 'quiz' && activeSess()) { tickNow(); store.save(); } });
+document.addEventListener('visibilitychange', () => { if (document.hidden && route().name === 'quiz' && activeSess()) { tickNow(); store.save(); } syncAutoHint(); });
 
 /* ---------------- boot ---------------- */
 (function boot() {

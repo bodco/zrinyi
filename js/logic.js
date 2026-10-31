@@ -36,6 +36,26 @@ export function hintList(p, lang, fallback = true) {
   return one ? [one] : [];
 }
 
+// Automatic hint timing. Returns the waiting time in ms before each hint level opens by
+// itself: [gap to level 1, gap from level 1 to level 2, ...]. Gaps grow by 1.5x, each capped.
+// context: 'quiz' (practice modes) or 'review' (mistake review try-again: shorter, the child met it before).
+export const AUTO_HINT_BASE = { 1: 40000, 2: 60000, 3: 80000 };
+export const AUTO_HINT_CAP = 180000;
+export function autoHintDelays(p, grade, context = 'quiz') {
+  const n = hintList(p, 'hu', context !== 'review').length;
+  const d = Math.min(3, Math.max(1, Math.round(dOf(p)) || 1));
+  let base = AUTO_HINT_BASE[d];
+  if (+grade <= 3) base *= 1.2; // slower readers
+  if (context === 'review') base *= 0.6;
+  const out = [];
+  let gap = base;
+  for (let i = 0; i < n; i++) {
+    out.push(Math.round(Math.min(gap, AUTO_HINT_CAP)));
+    gap *= 1.5;
+  }
+  return out;
+}
+
 export function openMistakes(all, gr) {
   return regular(all).filter((p) => isOpenMistake(gr.problemStats[p.id]));
 }

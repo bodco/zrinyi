@@ -64,14 +64,19 @@ export function archie(mood = 'happy', cls = '', outfit = OUTFIT) {
        <path d="M31 45 C33 38 38 28 42 17" stroke="${BROWN_D}" stroke-width="1.6" fill="none" stroke-linecap="round" opacity=".7"/>
        <path d="M78 17 C86 14 95 21 97 32 C98 40 94 46 89 45 C82 42 77 32 74 22 Z" fill="${BROWN}" ${S}/>
        <path d="M89 45 C87 38 82 28 78 17" stroke="${BROWN_D}" stroke-width="1.6" fill="none" stroke-linecap="round" opacity=".7"/>`;
-  const paw = (d) => `<path d="${d}" fill="${WHITE}" ${S}/>`;
-  const pawUp = mood === 'think' ? paw('M70 100 C70 90 74 80 79 80 C85 82 83 94 80 104 Z')
-    : (mood === 'wave' || mood === 'point')
-      ? paw('M74 98 C76 88 82 78 88 80 C93 83 88 96 83 104 Z') + `<path d="M96 76 l4 -4 M99 86 l6 -1" stroke="#FFC83D" stroke-width="2.6" stroke-linecap="round"/>`
+  // a raised foreleg replaces the right front leg (never a 5th limb): it grows out of the shoulder
+  const limb = (x1, y1, x2, y2) => `<path d="M${x1} ${y1} L${x2} ${y2}" stroke="${LINE}" stroke-width="13" fill="none" stroke-linecap="round"/>
+    <path d="M${x1} ${y1} L${x2} ${y2}" stroke="${WHITE}" stroke-width="9.600" fill="none" stroke-linecap="round"/>`;
+  const waving = mood === 'wave' || mood === 'point';
+  const pawUp = mood === 'think' ? limb(73, 90, 79, 76)
+    : waving ? limb(74, 88, 87, 70) + `<ellipse cx="89" cy="66" rx="7" ry="7.500" transform="rotate(30 89 66)" fill="${WHITE}" ${S}/><path d="M87 62 v4 M91 63 v4" stroke="${LINE}" stroke-width="1.200" stroke-linecap="round"/><path d="M95 56 l2 -4 M99 63 l5 -1" stroke="#FFC83D" stroke-width="2.600" stroke-linecap="round"/>`
       : '';
   const rightLeg = pawUp
     ? ''
     : `<path d="M66 100 L66 114 C66 119 76 119 76 114 L76 100 Z" fill="${WHITE}" ${S}/><path d="M69 116 v3 M73 116 v3" stroke="${LINE}" stroke-width="1.2"/>`;
+  const CHEST = pawUp
+    ? 'M44 66 C36 78 38 96 42 104 L42 114 C42 119 53 119 53 114 L53 100 L67 100 L70 104 C80 98 84 78 76 66 Z'
+    : 'M44 66 C36 78 38 96 42 104 L42 114 C42 119 53 119 53 114 L53 100 L67 100 L67 114 C67 119 78 119 78 114 L78 104 C82 96 84 78 76 66 Z';
   const tail = mood === 'sleep'
     ? `<path d="M86 108 C98 112 106 106 108 98" stroke="${LINE}" stroke-width="7.6" fill="none" stroke-linecap="round"/>
        <path d="M86 108 C98 112 106 106 108 98" stroke="${WHITE}" stroke-width="4.8" fill="none" stroke-linecap="round"/>
@@ -94,7 +99,7 @@ export function archie(mood = 'happy', cls = '', outfit = OUTFIT) {
     <path d="M76 88 C88 90 92 104 88 116 L70 118 L68 94 Z" fill="${WHITE}" ${S}/>
     <path d="M34 117 h13 M73 117 h13" stroke="${LINE}" stroke-width="1.2"/>
     <!-- compact chest + front legs -->
-    <path d="M44 66 C36 78 38 96 42 104 L42 114 C42 119 53 119 53 114 L53 100 L67 100 L67 114 C67 119 78 119 78 114 L78 104 C82 96 84 78 76 66 Z" fill="${WHITE}" ${S}/>
+    <path d="${CHEST}" fill="${WHITE}" ${S}/>
     ${rightLeg}
     <path d="M45 116 v3 M50 116 v3" stroke="${LINE}" stroke-width="1.2"/>
     <!-- brown shoulder/saddle patches -->

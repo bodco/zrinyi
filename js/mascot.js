@@ -11,6 +11,15 @@ let OUTFIT = null;
 export function setOutfit(o) { OUTFIT = o || null; }
 export function getOutfit() { return OUTFIT; }
 
+const starPath = (cx, cy, r) => {
+  let d = '';
+  for (let i = 0; i < 10; i++) {
+    const a = -Math.PI / 2 + (i * Math.PI) / 5, rr = i % 2 ? r * 0.45 : r;
+    d += `${i ? 'L' : 'M'}${(cx + rr * Math.cos(a)).toFixed(2)} ${(cy + rr * Math.sin(a)).toFixed(2)} `;
+  }
+  return d + 'Z';
+};
+
 const ACC = {
   // drawn before the head, so the muzzle overlaps the knot
   scarf: `<g class="acc acc-scarf"><path d="M39 70 Q60 83 81 70 L83 81 Q60 95 37 81 Z" fill="#F97316" stroke="${LINE}" stroke-width="1.5" stroke-linejoin="round"/>
@@ -29,30 +38,66 @@ const ACC = {
   crown: `<g class="acc acc-crown"><path d="M42 21 L39 3 L50 11 L60 -1 L70 11 L81 3 L78 21 Z" fill="#FFC83D" stroke="#9A6A12" stroke-width="1.6" stroke-linejoin="round"/>
     <path d="M42 17 L78 17" stroke="#E0A400" stroke-width="2.4"/>
     <circle cx="60" cy="11" r="2.6" fill="#E5484D"/><circle cx="49" cy="15" r="1.9" fill="#38BDF8"/><circle cx="71" cy="15" r="1.9" fill="#22C55E"/>
-    <circle cx="39" cy="3" r="2" fill="#FFE58A" stroke="#9A6A12" stroke-width="1"/><circle cx="60" cy="-1" r="2" fill="#FFE58A" stroke="#9A6A12" stroke-width="1"/><circle cx="81" cy="3" r="2" fill="#FFE58A" stroke="#9A6A12" stroke-width="1"/></g>`
+    <circle cx="39" cy="3" r="2" fill="#FFE58A" stroke="#9A6A12" stroke-width="1"/><circle cx="60" cy="-1" r="2" fill="#FFE58A" stroke="#9A6A12" stroke-width="1"/><circle cx="81" cy="3" r="2" fill="#FFE58A" stroke="#9A6A12" stroke-width="1"/></g>`,
+  // wave 2 (v11). Hats sit on the top of the head (y < 26) so the ears stay free; one hat at a time.
+  hat_wizard: `<g class="acc acc-hat_wizard"><path d="M40 23 C46 11 53 0 73 -13 C70 -1 74 11 80 23 Z" fill="#6D4AE8" stroke="${LINE}" stroke-width="1.8" stroke-linejoin="round"/>
+    <path d="M51 9 Q60 2 68 -6" stroke="#9B84FF" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+    <path d="${'STAR1'}" fill="#FFC83D" stroke="#9A6A12" stroke-width=".9" stroke-linejoin="round"/><path d="${'STAR2'}" fill="#FFC83D" stroke="#9A6A12" stroke-width=".9" stroke-linejoin="round"/>
+    <path d="M56.5 4 a3.6 3.6 0 1 0 3.2 5.6 a2.8 2.8 0 1 1 -3.2 -5.6 Z" fill="#FFE58A" stroke="#9A6A12" stroke-width=".8"/>
+    <path d="M32 23.5 Q60 15 88 23.5 Q91 27.5 86 29 Q60 23 34 29 Q29 27.5 32 23.5 Z" fill="#4C32C2" stroke="${LINE}" stroke-width="1.8" stroke-linejoin="round"/>
+    <circle cx="73" cy="-13" r="3.1" fill="#FFC83D" stroke="#9A6A12" stroke-width="1.1"/></g>`,
+  hat_pirate: `<g class="acc acc-hat_pirate"><path d="M30 25 C30 12 40 5 46 8 C50 1 70 1 74 8 C80 5 90 12 90 25 Q60 17 30 25 Z" fill="#2A2A33" stroke="${LINE}" stroke-width="1.8" stroke-linejoin="round"/>
+    <path d="M31.5 23.5 Q60 15.5 88.5 23.5" stroke="#FFC83D" stroke-width="2.4" fill="none" stroke-linecap="round"/>
+    <g transform="rotate(30 60 13)"><rect x="52" y="11.8" width="16" height="2.6" rx="1.3" fill="#FFFDF8"/><circle cx="52" cy="11.6" r="1.7" fill="#FFFDF8"/><circle cx="52" cy="14.6" r="1.7" fill="#FFFDF8"/><circle cx="68" cy="11.6" r="1.7" fill="#FFFDF8"/><circle cx="68" cy="14.6" r="1.7" fill="#FFFDF8"/></g>
+    <g transform="rotate(-30 60 13)"><rect x="52" y="11.8" width="16" height="2.6" rx="1.3" fill="#FFFDF8"/><circle cx="52" cy="11.6" r="1.7" fill="#FFFDF8"/><circle cx="52" cy="14.6" r="1.7" fill="#FFFDF8"/><circle cx="68" cy="11.6" r="1.7" fill="#FFFDF8"/><circle cx="68" cy="14.6" r="1.7" fill="#FFFDF8"/></g>
+    <circle cx="60" cy="9.5" r="4.6" fill="#FFFDF8"/><circle cx="58.3" cy="9.3" r="1.1" fill="#2A2A33"/><circle cx="61.7" cy="9.3" r="1.1" fill="#2A2A33"/></g>`,
+  hat_safari: `<g class="acc acc-hat_safari"><path d="M39 23 C39 4 81 4 81 23 Z" fill="#E3CC92" stroke="${LINE}" stroke-width="1.8" stroke-linejoin="round"/>
+    <path d="M60 5 V20 M50 7.5 Q47 14 47.5 21 M70 7.5 Q73 14 72.5 21" stroke="#C4A967" stroke-width="1.3" fill="none"/>
+    <path d="M39.5 18.5 H80.5 V23 H39.5 Z" fill="#8A5A2B" stroke="${LINE}" stroke-width="1.4" stroke-linejoin="round"/>
+    <path d="M28 25 Q60 17 92 25 Q95 29.5 89 30.5 Q60 24.5 31 30.5 Q25 29.5 28 25 Z" fill="#D6BC7C" stroke="${LINE}" stroke-width="1.8" stroke-linejoin="round"/>
+    <circle cx="60" cy="4.6" r="2.4" fill="#C4A967" stroke="${LINE}" stroke-width="1.2"/></g>`,
+  headphones: `<g class="acc acc-headphones"><path d="M30 37 C27 8 93 8 90 37" stroke="${LINE}" stroke-width="7.4" fill="none" stroke-linecap="round"/>
+    <path d="M30 37 C27 8 93 8 90 37" stroke="#4B5563" stroke-width="4.4" fill="none" stroke-linecap="round"/>
+    <path d="M40 15.5 Q60 7 80 15.5" stroke="#9CA3AF" stroke-width="1.4" fill="none" stroke-linecap="round"/>
+    <rect x="22.5" y="28" width="14" height="20" rx="6.5" fill="#E5484D" stroke="${LINE}" stroke-width="1.8"/><rect x="83.5" y="28" width="14" height="20" rx="6.5" fill="#E5484D" stroke="${LINE}" stroke-width="1.8"/>
+    <path d="M26.5 32 v8 M93.5 32 v8" stroke="#FF9A9E" stroke-width="2" stroke-linecap="round"/></g>`,
+  sunglasses: `<g class="acc acc-sunglasses"><path d="M37.5 34.5 H56.5 Q57.5 46 47 47.5 Q37 46.5 37.5 34.5 Z M63.5 34.5 H82.5 Q83 46.5 73 47.5 Q62.5 46 63.5 34.5 Z" fill="#1F2937" stroke="${INK}" stroke-width="2" stroke-linejoin="round"/>
+    <path d="M56.5 36 Q60 33.5 63.5 36 M37.5 35.5 L33.5 33 M82.5 35.5 L86.5 33" stroke="${INK}" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+    <path d="M41 38 L45.5 38 M67 38 L71.5 38" stroke="#93C5FD" stroke-width="2" stroke-linecap="round" opacity=".85"/></g>`,
+  goggles: `<g class="acc acc-goggles"><path d="M32 40 H38 M82 40 H88" stroke="#7A4A1E" stroke-width="5" stroke-linecap="round"/>
+    <path d="M55 40.5 Q60 37 65 40.5" stroke="#7A4A1E" stroke-width="3.4" fill="none" stroke-linecap="round"/>
+    <circle cx="47" cy="40" r="9" fill="#BFE6FA" stroke="#B7791F" stroke-width="3.4"/><circle cx="73" cy="40" r="9" fill="#BFE6FA" stroke="#B7791F" stroke-width="3.4"/>
+    <circle cx="47" cy="40" r="10.7" fill="none" stroke="${LINE}" stroke-width="1.2"/><circle cx="73" cy="40" r="10.7" fill="none" stroke="${LINE}" stroke-width="1.2"/>
+    <path d="M42 37 q2.500 -3 5.500 -3 M68 37 q2.500 -3 5.500 -3" stroke="#fff" stroke-width="1.8" fill="none" stroke-linecap="round"/></g>`,
+  medal: `<g class="acc acc-medal"><path d="M51 84 L56.5 101 L60.5 99.5 L56 83 Z M69 84 L63.5 101 L59.5 99.5 L64 83 Z" fill="#E5484D" stroke="${LINE}" stroke-width="1.3" stroke-linejoin="round"/>
+    <path d="M53.8 84.5 L58 99.8 M66.2 84.5 L62 99.8" stroke="#FFFDF8" stroke-width="1.3"/>
+    <circle cx="60" cy="105" r="8" fill="#FFC83D" stroke="#9A6A12" stroke-width="1.6"/><circle cx="60" cy="105" r="5.6" fill="none" stroke="#E0A400" stroke-width="1.2"/>
+    <path d="${'STAR3'}" fill="#FFF1B0" stroke="#9A6A12" stroke-width=".8" stroke-linejoin="round"/></g>`,
+  tie: `<g class="acc acc-tie"><path d="M55.5 84 L64.5 84 L62.5 91 L57.5 91 Z" fill="#1D4ED8" stroke="${LINE}" stroke-width="1.4" stroke-linejoin="round"/>
+    <path d="M57.5 91 L62.5 91 L65.5 106 L60 111.5 L54.5 106 Z" fill="#2563EB" stroke="${LINE}" stroke-width="1.5" stroke-linejoin="round"/>
+    <path d="M56.5 96 L63.5 93 M55.5 101.5 L64.5 97.5 M56 107 L65 103" stroke="#FFC83D" stroke-width="1.6" stroke-linecap="round"/></g>`
 };
+ACC.hat_wizard = ACC.hat_wizard.replace('STAR1', starPath(62, 15, 3.6)).replace('STAR2', starPath(68.5, 3, 2.5));
+ACC.medal = ACC.medal.replace('STAR3', starPath(60, 105.4, 3.9));
 
 
 // Sweaters (slot 'body'): drawn on the torso, under the harness. Each: base color, rib color, pattern (inside the torso clip).
 const RAINBOW = ['#EF4444', '#F97316', '#FACC15', '#22C55E', '#3B82F6', '#8B5CF6'];
-const starPath = (cx, cy, r) => {
-  let d = '';
-  for (let i = 0; i < 10; i++) {
-    const a = -Math.PI / 2 + (i * Math.PI) / 5, rr = i % 2 ? r * 0.45 : r;
-    d += `${i ? 'L' : 'M'}${(cx + rr * Math.cos(a)).toFixed(2)} ${(cy + rr * Math.sin(a)).toFixed(2)} `;
-  }
-  return d + 'Z';
-};
+
 const SWEATER = {
   sw_red: { c: '#E5484D', rib: '#C62F35', pat: `<path d="M0 79 Q60 87 120 79 M0 88 Q60 96 120 88" stroke="#FFFDF8" stroke-width="3.8" fill="none"/>` },
   sw_blue: { c: '#3B82F6', rib: '#2563EB', pat: [74, 81, 88].map((y) => Array.from({ length: 9 }, (_, i) => `M${33 + i * 6} ${y + (i % 2) * 0} l3 3.2 l3 -3.2`).join(' ')).map((d) => `<path d="${d}" stroke="#BFDBFE" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`).join('') },
   sw_green: { c: '#22A55B', rib: '#15803D', pat: `<path d="${starPath(45.5, 93, 4.6)}" fill="#FFC83D" stroke="${LINE}" stroke-width="1" stroke-linejoin="round"/><path d="${starPath(75, 93, 4.6)}" fill="#FFC83D" stroke="${LINE}" stroke-width="1" stroke-linejoin="round"/>` },
-  sw_rainbow: { c: RAINBOW[0], rib: '#7C3AED', pat: RAINBOW.map((col, i) => `<path d="M0 ${68 + i * 5.5} Q60 ${75 + i * 5.5} 120 ${68 + i * 5.5}" stroke="${col}" stroke-width="5.8" fill="none"/>`).join('') }
+  sw_rainbow: { c: RAINBOW[0], rib: '#7C3AED', pat: RAINBOW.map((col, i) => `<path d="M0 ${68 + i * 5.5} Q60 ${75 + i * 5.5} 120 ${68 + i * 5.5}" stroke="${col}" stroke-width="5.8" fill="none"/>`).join('') },
+  // yellow raincoat: smooth hem instead of ribs, two pockets with flaps, toggles
+  raincoat: { c: '#FACC15', rib: '#EAB308', noRib: 1, pat: `<path d="M40.5 88 h10 v7.5 h-10 Z M69.5 88 h10 v7.5 h-10 Z" fill="#FDE047" stroke="${LINE}" stroke-width="1.2" stroke-linejoin="round"/>
+      <path d="M40 88 h11 l-1 2.6 h-9 Z M69 88 h11 l-1 2.6 h-9 Z" fill="#EAB308" stroke="${LINE}" stroke-width="1.1" stroke-linejoin="round"/>
+      <path d="M56 89 v3 M64 89 v3" stroke="#8A5A12" stroke-width="2.4" stroke-linecap="round"/>` }
 };
 function sweaterSVG(kind, id) {
   const w = SWEATER[kind];
   if (!w) return '';
-  const ribs = Array.from({ length: 17 }, (_, i) => `M${36 + i * 3} 94 v9`).join(' ');
+  const ribs = w.noRib ? '' : Array.from({ length: 17 }, (_, i) => `M${36 + i * 3} 94 v9`).join(' ');
   return `<g class="acc acc-sweater acc-${kind}"><g clip-path="url(#${id}b)"><g clip-path="url(#${id}t)">
       <rect x="20" y="60" width="80" height="50" fill="${w.c}"/>${w.pat}
       <path d="M0 95 Q60 101 120 95 L120 110 L0 110 Z" fill="${w.rib}"/>
@@ -133,7 +178,74 @@ function houseSVG(kind) {
     <path d="M-60 57 L-12 9 L36 57" stroke="${C.roofL}" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
     ${flowers}</g>`;
 }
-const hasScene = (o) => !!(o && (o.toy || o.bowl || o.house));
+// superhero cape (slot body): hangs behind Archie from the shoulders; two collar points show under the head
+const CAPE_BACK = `<g class="acc acc-cape"><path d="M45 70 C35 81 26 96 20 113 Q24 110.5 28 111.5 L60 103 L92 111.5 Q96 110.5 100 113 C94 96 85 81 75 70 Z" fill="#E11D48" stroke="${LINE}" stroke-width="1.8" stroke-linejoin="round"/>
+    <path d="M33 84 Q28 95 25 106 M87 84 Q92 95 95 106" stroke="#9F1239" stroke-width="1.6" fill="none" stroke-linecap="round" opacity=".6"/></g>`;
+const CAPE_FRONT = `<g class="acc acc-cape-c"><path d="M46 69 L39.5 80 L50.5 77.5 Z M74 69 L80.5 80 L69.5 77.5 Z" fill="#E11D48" stroke="${LINE}" stroke-width="1.5" stroke-linejoin="round"/></g>`;
+
+// more toys (slot toy) and the new scene slots trophy and bed
+TOYS.ball = () => `<circle cx="3" cy="112.5" r="9.6" fill="#D4E94B" stroke="${LINE}" stroke-width="1.8"/>
+    <path d="M-5.2 107 Q3 112.5 -3.8 120 M11.6 105.6 Q2.8 112 11 118.6" stroke="#FFFDF8" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+    <path d="M-2 106.5 q2.500 -1.600 5.500 -1.300" stroke="#F4FBC7" stroke-width="1.5" fill="none" stroke-linecap="round"/>`;
+TOYS.frisbee = () => `<ellipse cx="3" cy="118.5" rx="14" ry="4" fill="#B91C1C" stroke="${LINE}" stroke-width="1.8"/>
+    <ellipse cx="3" cy="116.8" rx="14" ry="4.2" fill="#EF4444" stroke="${LINE}" stroke-width="1.8"/>
+    <ellipse cx="3" cy="116.6" rx="8" ry="2.1" fill="none" stroke="#FCA5A5" stroke-width="1.4"/>`;
+function trophySVG() {
+  return `<g class="scn scn-trophy" transform="translate(-5 122) scale(1.3) translate(0 -122)">
+    <path d="M-31 116 H-13 V122 H-31 Z" fill="#8A5A2B" stroke="${LINE}" stroke-width="1.8" stroke-linejoin="round"/>
+    <path d="M-28 116 L-26.5 110.5 H-17.5 L-16 116 Z" fill="#E0A400" stroke="${LINE}" stroke-width="1.6" stroke-linejoin="round"/>
+    <path d="M-24 110.5 V104 H-20 V110.5" fill="#E0A400" stroke="${LINE}" stroke-width="1.6" stroke-linejoin="round"/>
+    <path d="M-33 88.5 C-38 88 -39.5 96 -32 99.5 M-11 88.5 C-6 88 -4.5 96 -12 99.5" stroke="${LINE}" stroke-width="5" fill="none" stroke-linecap="round"/>
+    <path d="M-33 88.5 C-38 88 -39.5 96 -32 99.5 M-11 88.5 C-6 88 -4.5 96 -12 99.5" stroke="#FFC83D" stroke-width="2.4" fill="none" stroke-linecap="round"/>
+    <path d="M-34 86 H-10 Q-10 104 -22 104.5 Q-34 104 -34 86 Z" fill="#FFC83D" stroke="${LINE}" stroke-width="1.8" stroke-linejoin="round"/>
+    <path d="M-34 86 H-10" stroke="#E0A400" stroke-width="2.2"/>
+    <path d="${starPath(-22, 94.5, 4.2)}" fill="#FFF1B0" stroke="#9A6A12" stroke-width=".8" stroke-linejoin="round"/>
+    <path d="M-30.5 90 Q-30 98 -26 101" stroke="#FFF1B0" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+    ${sparkle(-38, 80, 3.4)}</g>`;
+}
+// a soft round cushion Archie sits on (drawn behind him; its front shows below his feet)
+function bedSVG() {
+  return `<g class="scn scn-bed">
+    <path d="M13 113 Q13 104.5 25 104.5 H95 Q107 104.5 107 113 V119 Q107 127.5 95 127.5 H25 Q13 127.5 13 119 Z" fill="#7CB8F2" stroke="${LINE}" stroke-width="1.8" stroke-linejoin="round"/>
+    <path d="M16 116 Q60 122.5 104 116" stroke="#4A8FD6" stroke-width="2" fill="none" stroke-linecap="round"/>
+    <path d="M19 109 Q22 107 27 107" stroke="#C7E2FB" stroke-width="2" fill="none" stroke-linecap="round"/>
+    <g fill="#FFFDF8" opacity=".85"><circle cx="20" cy="121.5" r="1.4"/><circle cx="31" cy="124" r="1.4"/><circle cx="89" cy="124" r="1.4"/><circle cx="100" cy="121.5" r="1.4"/></g></g>`;
+}
+
+// Backdrops (slot bg): a light flat picture behind the hero sections only (never inside the Archie svg)
+export function bgSVG(kind, cls = '') {
+  const tree = (x, y, k = 1) => `<g transform="translate(${x} ${y}) scale(${k})"><path d="M-4 0 V-34 H4 V0 Z" fill="#C08A5A" stroke="#9C6B42" stroke-width="1.5"/>
+    <circle cx="0" cy="-48" r="22" fill="#9BD99B" stroke="#6FB87A" stroke-width="2"/><circle cx="-14" cy="-38" r="13" fill="#9BD99B" stroke="#6FB87A" stroke-width="2"/><circle cx="14" cy="-38" r="13" fill="#9BD99B" stroke="#6FB87A" stroke-width="2"/>
+    <path d="M-12 -40 q12 -14 24 0" stroke="#B9E8B9" stroke-width="3" fill="none" stroke-linecap="round"/></g>`;
+  const cloud = (x, y, k = 1) => `<g transform="translate(${x} ${y}) scale(${k})" fill="#FFFFFF" opacity=".95"><circle cx="0" cy="0" r="9"/><circle cx="11" cy="-4" r="11"/><circle cx="23" cy="0" r="8"/><rect x="0" y="-1" width="23" height="9" rx="4.5"/></g>`;
+  const P = {
+    bg_park: `<rect width="400" height="200" fill="#E3F3FF"/>${cloud(250, 40)}${cloud(330, 70, .8)}${cloud(60, 34, .7)}
+      <circle cx="360" cy="30" r="15" fill="#FFF1B0"/>
+      <path d="M0 150 Q100 128 200 146 Q300 162 400 140 V200 H0 Z" fill="#CDEFC9"/>
+      <path d="M0 172 Q120 160 240 172 Q320 180 400 168 V200 H0 Z" fill="#B7E4B2"/>
+      ${tree(42, 156)}${tree(352, 152, .8)}
+      <g fill="#FDE68A"><circle cx="140" cy="176" r="2.6"/><circle cx="270" cy="182" r="2.6"/></g><g fill="#F9A8D4"><circle cx="190" cy="186" r="2.6"/><circle cx="310" cy="176" r="2.6"/></g>`,
+    bg_beach: `<rect width="400" height="200" fill="#E6F6FF"/>${cloud(80, 40, .8)}${cloud(300, 30, .9)}
+      <circle cx="350" cy="44" r="16" fill="#FFF1B0"/>
+      <path d="M0 116 H400 V160 H0 Z" fill="#BFE5FA"/>
+      <path d="M0 124 q20 -5 40 0 t40 0 t40 0 t40 0 t40 0 t40 0 t40 0 t40 0 t40 0 t40 0" stroke="#E6F6FF" stroke-width="2.5" fill="none"/>
+      <path d="M0 140 q20 -5 40 0 t40 0 t40 0 t40 0 t40 0 t40 0 t40 0 t40 0 t40 0 t40 0" stroke="#D6EFFC" stroke-width="2.5" fill="none"/>
+      <path d="M0 152 Q200 140 400 152 V200 H0 Z" fill="#FBE7B5"/>
+      <g fill="#F5D58E"><circle cx="70" cy="178" r="2"/><circle cx="160" cy="186" r="2"/><circle cx="250" cy="176" r="2"/><circle cx="330" cy="188" r="2"/></g>
+      <path d="M370 152 Q371 120 360 100" stroke="#C08A5A" stroke-width="5" fill="none" stroke-linecap="round"/>
+      <path d="M360 100 q-20 -8 -32 4 q16 -2 32 -4 q-6 -18 -24 -20 q14 8 24 20 q8 -18 28 -16 q-18 4 -28 16 q20 0 30 14 q-16 -10 -30 -14" fill="#9BD99B" stroke="#6FB87A" stroke-width="1.5" stroke-linejoin="round"/>`,
+    bg_space: `<rect width="400" height="200" fill="#EEEAFE"/>
+      <circle cx="330" cy="58" r="24" fill="#FBCFE8" stroke="#F0A8CF" stroke-width="2"/><ellipse cx="330" cy="58" rx="40" ry="9" fill="none" stroke="#C4B5FD" stroke-width="3" transform="rotate(-15 330 58)"/>
+      <path d="M318 46 q8 -6 18 -2" stroke="#FDE7F3" stroke-width="3" fill="none" stroke-linecap="round"/>
+      <path d="M60 30 a14 14 0 1 0 12 22 a11 11 0 1 1 -12 -22 Z" fill="#FFF1B0" stroke="#F5D58E" stroke-width="1.5"/>
+      ${[[120, 24, 4], [200, 50, 3], [250, 22, 2.6], [30, 90, 3], [380, 120, 3.4], [150, 92, 2.4], [270, 112, 2.6], [96, 140, 2.2], [360, 170, 2.4]].map(([x, y, r]) => `<path d="${starPath(x, y, r)}" fill="#FDE68A"/>`).join('')}
+      ${[[170, 30], [300, 150], [50, 160], [230, 80], [110, 70], [390, 30]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="1.6" fill="#C4B5FD"/>`).join('')}
+      <path d="M0 176 Q200 160 400 176 V200 H0 Z" fill="#DDD6FE"/>`
+  };
+  return P[kind] ? `<svg class="hero-bg-svg bg-${kind} ${cls}" viewBox="0 0 400 200" preserveAspectRatio="xMidYMax slice" aria-hidden="true" focusable="false">${P[kind]}</svg>` : '';
+}
+
+const hasScene = (o) => !!(o && (o.toy || o.bowl || o.house || o.trophy || o.bed));
 
 let _aid = 0;
 // Archie's drawing in his own 0..120 x 0..124 box: {defs, g}
@@ -225,14 +337,18 @@ function archieParts(mood, outfit) {
       : '';
   const HEAD = 'M60 13 C44 13 34 24 34 38 C34 48 39 54 43 60 C45 70 50 80 60 80 C70 80 75 70 77 60 C81 54 86 48 86 38 C86 24 76 13 60 13 Z';
   const defs = `<clipPath id="${id}"><path d="${HEAD}"/></clipPath><clipPath id="${id}b"><path d="${BODY}"/></clipPath><clipPath id="${id}t"><path d="M-10 -40 H130 V100 Q60 106 -10 100 Z"/></clipPath>`;
+  const cape = o.body === 'cape';
+  const hideBuckle = o.neck === 'bowtie' || o.neck === 'tie' || o.neck === 'medal';
   const g = `<g class="owl-body-g">
+    ${cape ? CAPE_BACK : ''}
     ${tail}
     ${body}
+    ${cape ? CAPE_FRONT : ''}
     <!-- harness -->
     <path d="M42 80 Q60 92 78 80 L78 86 Q60 98 42 86 Z" fill="${NAVY}" stroke="${LINE}" stroke-width="1.3" stroke-linejoin="round"/>
     <path d="M60 92 L60 106" stroke="${NAVY}" stroke-width="3.5" stroke-linecap="round"/>
-    ${o.neck === 'bowtie' ? '' : `<circle cx="60" cy="91" r="5" fill="#FFC83D" stroke="${LINE}" stroke-width="1.3"/><circle cx="60" cy="91" r="2" fill="${NAVY}"/>`}
-    ${o.neck === 'scarf' ? ACC.scarf : ''}
+    ${hideBuckle ? '' : `<circle cx="60" cy="91" r="5" fill="#FFC83D" stroke="${LINE}" stroke-width="1.3"/><circle cx="60" cy="91" r="2" fill="${NAVY}"/>`}
+    ${o.neck === 'scarf' ? ACC.scarf : ''}${o.neck === 'tie' ? ACC.tie : ''}${o.neck === 'medal' ? ACC.medal : ''}
     ${pawUp}${sleeve}
     <!-- head: brown with white blaze and long white muzzle -->
     <path d="${HEAD}" fill="${BROWN}"/>
@@ -264,7 +380,7 @@ export function archie(mood = 'happy', cls = '', outfit = OUTFIT) {
 // Archie at home: wearables plus his scene items (kennel behind him, toy and bowl next to him).
 // Only for the spots where he is shown large. Without scene items it is the same as archie().
 export function sceneBox(o) {
-  const minX = o.house ? (o.house === 'house_castle' ? -78 : -70) : o.toy ? -22 : 0;
+  const minX = o.house ? (o.house === 'house_castle' ? -78 : -70) : o.trophy ? -62 : o.toy ? -22 : 0;
   const maxX = o.bowl ? 150 : 120;
   const minY = o.house === 'house_castle' ? -28 : o.house ? -3 : 0;
   return { x: minX, y: minY, w: maxX - minX, h: 128 - minY };
@@ -276,7 +392,7 @@ export function archieScene(mood = 'happy', cls = '', outfit = OUTFIT) {
   const b = sceneBox(o);
   const ground = `<ellipse cx="${b.x + b.w / 2}" cy="122.5" rx="${b.w / 2 - 3}" ry="4.6" fill="#5B3A22" opacity=".1"/>`;
   return `<svg class="owl archie archie-scene owl-${mood} ${cls}" viewBox="${b.x} ${b.y} ${b.w} ${b.h}" style="--ar:${(b.w / b.h).toFixed(4)};--sk:${(b.h / 124).toFixed(4)}" role="img" aria-label="Archie" focusable="false">
-  <defs>${defs}</defs>${ground}${o.house ? houseSVG(o.house) : ''}${o.toy && TOYS[o.toy] ? `<g class="scn scn-toy scn-${o.toy}">${TOYS[o.toy]()}</g>` : ''}${g}${o.bowl ? bowlSVG(o.bowl) : ''}</svg>`;
+  <defs>${defs}</defs>${ground}${o.house ? houseSVG(o.house) : ''}${o.trophy ? trophySVG() : ''}${o.bed ? bedSVG() : ''}${o.toy && TOYS[o.toy] ? `<g class="scn scn-toy scn-${o.toy}">${TOYS[o.toy]()}</g>` : ''}${g}${o.bowl ? bowlSVG(o.bowl) : ''}</svg>`;
 }
 
 export const owl = archie;

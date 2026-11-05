@@ -192,7 +192,14 @@ export function newSession(grade, mode, topic, problems) {
 }
 
 // Archie's ranks by lifetime bones (spending never lowers the level)
-export const LEVEL_AT = [0, 60, 150, 300, 500, 800, 1200, 1700, 2400, 3300];
+// ranks 11-14 (v11) are for the long run of an active older kid (months 2-4); set with tests/econ_sim.mjs
+export const LEVEL_AT = [0, 60, 150, 300, 500, 800, 1200, 1700, 2400, 3300, 4200, 5200, 6300, 7500];
+
+// Age bands: grades up to YOUNG_MAX_GRADE are 'young' (cheaper shop, lower rank locks, smaller daily goals,
+// a weekly chest after fewer days, surprise gifts, extra early badges). Answer scoring is the same for everybody.
+export const YOUNG_MAX_GRADE = 3;
+export const bandOf = (g) => (+g >= 1 && +g <= YOUNG_MAX_GRADE ? 'young' : 'older');
+export const isYoung = (g) => bandOf(g) === 'young';
 export function rankOf(earned) {
   let i = 0;
   while (i + 1 < LEVEL_AT.length && earned >= LEVEL_AT[i + 1]) i++;
@@ -368,6 +375,9 @@ export function markFixed(gr, id) {
   return true;
 }
 
+// easy early badges, only for the young band (shown first)
+export const YOUNG_BADGES = ['fix1', 'buy1', 'sessions3', 'goal1'];
+export const badgeOrder = (gr) => (gr && gr.rw && isYoung(gr.rw.g) ? YOUNG_BADGES.concat(BADGE_ORDER) : BADGE_ORDER);
 export const BADGE_ORDER = ['first', 'streak3', 'streak7', 'streak14', 'perfect', 'fix10', 'sessions10', 'explorer', 'fullDone', 'mockDone', 'mock100', 'goal7', 'chest', 'level3', 'level5'];
 
 export function checkBadges(gr, byId, topicsInData) {
@@ -391,10 +401,14 @@ export function checkBadges(gr, byId, topicsInData) {
     goal7: !!rw && (rw.goalDays || 0) >= 7,
     chest: !!rw && Object.keys(rw.chests || {}).length >= 1,
     level3: !!rw && rankOf(rw.earned || 0).n >= 3,
-    level5: !!rw && rankOf(rw.earned || 0).n >= 5
+    level5: !!rw && rankOf(rw.earned || 0).n >= 5,
+    fix1: (gr.fixedTotal || 0) >= 1 || (!!rw && (rw.fixN || 0) >= 1),
+    buy1: !!rw && Array.isArray(rw.owned) && rw.owned.some((id) => id !== 'navy'),
+    sessions3: s.length >= 3,
+    goal1: !!rw && (rw.goalDays || 0) >= 1
   };
   const earned = [];
-  for (const id of BADGE_ORDER) {
+  for (const id of badgeOrder(gr)) {
     if (cond[id] && !have.has(id)) { gr.badges.push({ id, date: new Date().toISOString() }); earned.push(id); }
   }
   return earned;

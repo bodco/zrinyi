@@ -57,7 +57,7 @@ export const STR = {
     bonesN: (n) => `${n} csont`,
     bonesWord: 'csont',
     bonesTitle: 'Archie csontjai',
-    rankNames: ['Kölyök', 'Szimatoló', 'Nyomkereső', 'Ügyes mancs', 'Detektív', 'Fődetektív', 'Mester', 'Nagymester', 'Bajnok', 'Legenda'],
+    rankNames: ['Kölyök', 'Szimatoló', 'Nyomkereső', 'Ügyes mancs', 'Detektív', 'Fődetektív', 'Mester', 'Nagymester', 'Bajnok', 'Legenda', 'Szuperhős', 'Üstökös', 'Csillag', 'Zrínyi-hős'],
     levelN: (n) => `${n}. szint`,
     toNext: (a, b) => `${a}/${b} csont a következő szintig`,
     maxLevel: 'A legmagasabb szinten vagy!',
@@ -75,7 +75,7 @@ export const STR = {
     weekChest: (a, n) => `Heti láda: ${a}/${n} nap`,
     chestReady: 'A heti láda már a tiéd!',
     chestTitle: 'Kinyílt a heti láda!',
-    chestText: (n) => `+${n} csont ajándék, mert a héten 5 napon gyakoroltál.`,
+    chestText: (n, d = 5) => `+${n} csont ajándék, mert a héten ${d} napon gyakoroltál.`,
     weekdays: ['H', 'K', 'Sze', 'Cs', 'P', 'Szo', 'V'],
     partCorrect: (n) => `${n} helyes`,
     partUnaided: (n) => `${n} tipp nélkül`,
@@ -92,12 +92,15 @@ export const STR = {
     homeSayFull: 'Van egy félbehagyott teljes edzésed. Folytassuk, ahol abbahagytad?',
     shopTitle: 'Archie szekrénye',
     shopSay: 'Mit vegyek fel ma? Csontot gyakorlással gyűjthetsz, és sosem veszíted el.',
-    slots: { harness: 'Hám', body: 'Pulóver', hat: 'Sapka', neck: 'Nyakba', eyes: 'Szemüveg', toy: 'Csont játék', bowl: 'Tál', house: 'Kutyaház', extra: 'Hasznos' },
+    slots: { harness: 'Hám', body: 'Pulóver, köpeny', hat: 'Sapka, kalap', neck: 'Nyakba', eyes: 'Szemüveg', toy: 'Játék', bowl: 'Tál', house: 'Kutyaház', trophy: 'Kupa', bed: 'Párna', bg: 'Háttér', extra: 'Hasznos' },
     items: { navy: 'Kék hám', red: 'Piros hám', green: 'Zöld hám', pink: 'Rózsaszín hám', gold: 'Arany hám', bowtie: 'Csokornyakkendő', scarf: 'Csíkos sál', glasses: 'Szemüveg', cap: 'Baseballsapka', crown: 'Korona',
       sw_red: 'Csíkos piros pulóver', sw_blue: 'Kék kötött pulóver', sw_green: 'Zöld csillagos pulóver', sw_rainbow: 'Szivárványos pulóver',
       toy_small: 'Kis csont játék', toy_big: 'Nagy rágócsont', toy_gold: 'Arany csont',
       bowl_blue: 'Kék tál', bowl_red: 'Piros tál', bowl_green: 'Zöld tál', bowl_pink: 'Rózsaszín tál', bowl_gold: 'Arany tál',
-      house_wood: 'Fa kutyaház', house_red: 'Piros tetős kutyaház', house_blue: 'Kék kutyaház virágokkal', house_castle: 'Kutyakastély' },
+      house_wood: 'Fa kutyaház', house_red: 'Piros tetős kutyaház', house_blue: 'Kék kutyaház virágokkal', house_castle: 'Kutyakastély',
+      headphones: 'Fejhallgató', sunglasses: 'Napszemüveg', tie: 'Nyakkendő', ball: 'Teniszlabda', raincoat: 'Sárga esőkabát', bg_park: 'Park háttér', hat_pirate: 'Kalózkalap',
+      frisbee: 'Frizbi', goggles: 'Pilótaszemüveg', bed: 'Puha párna', hat_safari: 'Szafari kalap', medal: 'Aranyérem', bg_beach: 'Tengerpart háttér', cape: 'Szuperhős köpeny',
+      hat_wizard: 'Varázslósüveg', bg_space: 'Űr háttér', trophy: 'Bajnoki kupa' },
     wear: 'Felveszem',
     takeOff: 'Leveszem',
     wearing: 'Rajta van',
@@ -107,7 +110,7 @@ export const STR = {
     buyYes: 'Megveszem',
     bought: 'Archie nagyon örül neki!',
     goalTitle: 'Napi cél',
-    goalNames: { 30: 'Kényelmes', 50: 'Rendes', 80: 'Komoly' },
+    goalNames: ['Kényelmes', 'Rendes', 'Komoly'],
     goalDesc: 'Hány csontot gyűjtsön Archie naponta? Csak segít a rendszerességben, nem kötelező.',
     statBones: 'csont',
     statLevel: 'szint',
@@ -303,7 +306,11 @@ export const STR = {
       goal7: ['Célba értem', '7 napon teljesítetted a napi célt'],
       chest: ['Kincskereső', 'Kinyitottad a heti ládát'],
       level3: ['Nyomkereső', 'Archie elérte a 3. szintet'],
-      level5: ['Detektív', 'Archie elérte az 5. szintet']
+      level5: ['Detektív', 'Archie elérte az 5. szintet'],
+      fix1: ['Első javítás', 'Kijavítottad az első hibádat'],
+      buy1: ['Első ajándék', 'Vettél valamit Archie-nak'],
+      sessions3: ['Három kör', '3 befejezett kör'],
+      goal1: ['Napi cél', 'Először teljesítetted a napi célt']
     },
     newBadge: 'Új jelvény!',
     // parents
@@ -316,10 +323,21 @@ export const STR = {
     homeSayGate: 'Nézzük meg együtt a hibákat, utána jöhet a következő kör!',
     lockedMode: 'Zárva, előbb a javítás',
     fixPay: 'Javításért',
-    slotGroups: { wear: 'Ruhák', home: 'Archie otthona' },
-    rankLock: (n) => `Szint ${n}-${[3, 6, 8].includes(n) ? 'tól' : 'től'}`,
+    slotGroups: { wear: 'Ruhák', home: 'Archie otthona', bg: 'Hátterek' },
+    rankLock: (n) => `Szint ${n}-${[3, 6, 8].includes(n % 10) || [20, 30, 80].includes(n) ? 'tól' : 'től'}`,
     rankLockAria: (n) => `Zárva: a ${n}. szinttől vehető meg`,
     premium: 'Különleges',
+    // v11: young band rewards, wave 2
+    newTag: 'Új!',
+    newInShop: 'Új dolgok!',
+    surpriseTitle: 'Meglepetés!',
+    surpriseText: (n) => `Archie talált egy ajándékdobozt: +${n} csont!`,
+    surpriseIn: (k) => k === 1 ? 'A következő kör után meglepetés jön!' : `Még ${k} kör, és jön a meglepetés!`,
+    goalBonusTitle: 'Megvan a mai cél!',
+    goalBonusText: (n) => `Archie pörög örömében. Jutalom: +${n} csont!`,
+    goalHitBonus: (n) => `Mai cél teljesítve! +${n} csont 🎉`,
+    levelUpNew: (n) => `${n} új dolog nyílt meg a szekrényben!`,
+    backdrop: 'Háttér',
     langName: 'Magyar'
   },
   uk: {
@@ -369,7 +387,7 @@ export const STR = {
     bonesN: (n) => `${n} ${ukPl(n, 'кісточка', 'кісточки', 'кісточок')}`,
     bonesWord: 'кісточок',
     bonesTitle: 'Кісточки Арчі',
-    rankNames: ['Цуценя', 'Нюхач', 'Слідопит', 'Спритна лапка', 'Детектив', 'Головний детектив', 'Майстер', 'Гросмейстер', 'Чемпіон', 'Легенда'],
+    rankNames: ['Цуценя', 'Нюхач', 'Слідопит', 'Спритна лапка', 'Детектив', 'Головний детектив', 'Майстер', 'Гросмейстер', 'Чемпіон', 'Легенда', 'Супергерой', 'Комета', 'Зірка', 'Герой Зріні'],
     levelN: (n) => `Рівень ${n}`,
     toNext: (a, b) => `${a} з ${b} кісточок до наступного рівня`,
     maxLevel: 'Це найвищий рівень!',
@@ -387,7 +405,7 @@ export const STR = {
     weekChest: (a, n) => `Скриня тижня: ${a} з ${n} днів`,
     chestReady: 'Скриня тижня вже твоя!',
     chestTitle: 'Скриня тижня відкрилась!',
-    chestText: (n) => `+${n} кісточок у подарунок, бо цього тижня ти тренувався 5 днів.`,
+    chestText: (n, d = 5) => `+${n} ${ukPl(n, 'кісточка', 'кісточки', 'кісточок')} у подарунок, бо цього тижня ти тренувався ${d} ${ukPl(d, 'день', 'дні', 'днів')}.`,
     weekdays: ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Нд'],
     partCorrect: (n) => `${n} правильно`,
     partUnaided: (n) => `${n} без підказок`,
@@ -404,12 +422,15 @@ export const STR = {
     homeSayFull: 'У тебе є незавершене повне тренування. Продовжимо з того місця?',
     shopTitle: 'Шафа Арчі',
     shopSay: 'Що мені вдягнути сьогодні? Кісточки збираєш, коли тренуєшся, і ніколи їх не втрачаєш.',
-    slots: { harness: 'Шлейка', body: 'Светрик', hat: 'Шапка', neck: 'На шию', eyes: 'Окуляри', toy: 'Кісточка-іграшка', bowl: 'Миска', house: 'Будка', extra: 'Корисне' },
+    slots: { harness: 'Шлейка', body: 'Светрик, плащ', hat: 'Шапка, капелюх', neck: 'На шию', eyes: 'Окуляри', toy: 'Іграшка', bowl: 'Миска', house: 'Будка', trophy: 'Кубок', bed: 'Подушка', bg: 'Фон', extra: 'Корисне' },
     items: { navy: 'Синя шлейка', red: 'Червона шлейка', green: 'Зелена шлейка', pink: 'Рожева шлейка', gold: 'Золота шлейка', bowtie: 'Метелик', scarf: 'Смугастий шарф', glasses: 'Окуляри', cap: 'Кепка', crown: 'Корона',
       sw_red: 'Червоний смугастий светрик', sw_blue: 'Синій вʼязаний светрик', sw_green: 'Зелений светрик із зірками', sw_rainbow: 'Райдужний светрик',
       toy_small: 'Маленька кісточка-іграшка', toy_big: 'Велика кісточка для гризіння', toy_gold: 'Золота кісточка',
       bowl_blue: 'Синя миска', bowl_red: 'Червона миска', bowl_green: 'Зелена миска', bowl_pink: 'Рожева миска', bowl_gold: 'Золота миска',
-      house_wood: 'Деревʼяна будка', house_red: 'Будка з червоним дахом', house_blue: 'Синя будка з квітами', house_castle: 'Будка-замок' },
+      house_wood: 'Деревʼяна будка', house_red: 'Будка з червоним дахом', house_blue: 'Синя будка з квітами', house_castle: 'Будка-замок',
+      headphones: 'Навушники', sunglasses: 'Сонцезахисні окуляри', tie: 'Краватка', ball: 'Тенісний мʼячик', raincoat: 'Жовтий дощовик', bg_park: 'Фон: парк', hat_pirate: 'Піратський капелюх',
+      frisbee: 'Фрисбі', goggles: 'Окуляри пілота', bed: 'Мʼяка подушка', hat_safari: 'Капелюх для сафарі', medal: 'Золота медаль', bg_beach: 'Фон: пляж', cape: 'Плащ супергероя',
+      hat_wizard: 'Капелюх чарівника', bg_space: 'Фон: космос', trophy: 'Кубок чемпіона' },
     wear: 'Вдягнути',
     takeOff: 'Зняти',
     wearing: 'Вдягнено',
@@ -419,7 +440,7 @@ export const STR = {
     buyYes: 'Купити',
     bought: 'Арчі дуже радий!',
     goalTitle: 'Мета на день',
-    goalNames: { 30: 'Легка', 50: 'Звичайна', 80: 'Серйозна' },
+    goalNames: ['Легка', 'Звичайна', 'Серйозна'],
     goalDesc: 'Скільки кісточок Арчі збирає щодня? Це лише допомагає тренуватися регулярно, не обовʼязково.',
     statBones: 'кісточок',
     statLevel: 'рівень',
@@ -610,7 +631,11 @@ export const STR = {
       goal7: ['У ціль', 'Мету дня виконано 7 разів'],
       chest: ['Шукач скарбів', 'Відкрито скриню тижня'],
       level3: ['Слідопит', 'Арчі досяг 3 рівня'],
-      level5: ['Детектив', 'Арчі досяг 5 рівня']
+      level5: ['Детектив', 'Арчі досяг 5 рівня'],
+      fix1: ['Перше виправлення', 'Виправлено першу помилку'],
+      buy1: ['Перший подарунок', 'Куплено щось для Арчі'],
+      sessions3: ['Три кола', '3 завершені тренування'],
+      goal1: ['Мета дня', 'Мету дня виконано вперше']
     },
     newBadge: 'Новий значок!',
     parentsTitle: 'Батькам',
@@ -622,10 +647,21 @@ export const STR = {
     homeSayGate: 'Розберімо помилки разом, а потім буде наступне коло!',
     lockedMode: 'Закрито, спершу виправлення',
     fixPay: 'За виправлення',
-    slotGroups: { wear: 'Одяг', home: 'Дім Арчі' },
+    slotGroups: { wear: 'Одяг', home: 'Дім Арчі', bg: 'Фони' },
     rankLock: (n) => `З рівня ${n}`,
     rankLockAria: (n) => `Закрито: можна купити з рівня ${n}`,
     premium: 'Особлива річ',
+    // v11: young band rewards, wave 2
+    newTag: 'Нове!',
+    newInShop: 'Є нові речі!',
+    surpriseTitle: 'Сюрприз!',
+    surpriseText: (n) => `Арчі знайшов коробку з подарунком: +${n} ${ukPl(n, 'кісточка', 'кісточки', 'кісточок')}!`,
+    surpriseIn: (k) => k === 1 ? 'Після наступного кола буде сюрприз!' : `Ще ${k} кола, і буде сюрприз!`,
+    goalBonusTitle: 'Мету дня виконано!',
+    goalBonusText: (n) => `Арчі крутиться від радості. Нагорода: +${n} ${ukPl(n, 'кісточка', 'кісточки', 'кісточок')}!`,
+    goalHitBonus: (n) => `Мету на сьогодні виконано! +${n} 🎉`,
+    levelUpNew: (n) => `У шафі ${ukPl(n, 'відкрилася', 'відкрилися', 'відкрилося')} ${n} ${ukPl(n, 'нова річ', 'нові речі', 'нових речей')}!`,
+    backdrop: 'Фон',
     langName: 'Українська'
   }
 };
@@ -645,7 +681,8 @@ export const TOPICS = {
 export const BADGE_ICONS = {
   first: '🌱', streak3: '🔥', streak7: '🏅', fix10: '🔍', perfect: '💯',
   mockDone: '🎯', mock100: '🏆', sessions10: '💪', explorer: '🧭',
-  streak14: '📆', fullDone: '🏃', goal7: '🥇', chest: '🎁', level3: '🐾', level5: '🕵️'
+  streak14: '📆', fullDone: '🏃', goal7: '🥇', chest: '🎁', level3: '🐾', level5: '🕵️',
+  fix1: '🩹', buy1: '🎀', sessions3: '⭐', goal1: '🎯'
 };
 
 // Parents page content (rich HTML, trusted, authored here)
@@ -677,7 +714,7 @@ export const PARENTS = {
     <li><b>Automatikus tippek és szint:</b> ha a gyerek egy ideig nem válaszol, a következő tipp magától kinyílik; a várakozás a feladat nehézségétől és az osztálytól függ, és tippről tippre nő (a próbaversenyen soha). Ez, valamint a gyakorlás szintje ("Mint a versenyen" vagy "Könnyebb") az osztály kezdőoldalán állítható.</li>
     <li><b>Archie:</b> a kis Jack Russell terrier végig a gyerek mellett van, bátorít, és gondolkodik vele. Gyakorláskor nem árulja el, jó-e a válasz, az eredmény a kör végén jön.</li>
     <li><b>Kihívások:</b> ha a kör könnyűnek tűnik, a nehezebb versenyfeladatokból is lehet gyakorolni (időkorlát nélkül). Ezek nem kerülnek a többi körbe.</li>
-    <li><b>Csontok, napi cél, sorozat, szekrény:</b> Archie csontjai pontosan úgy számolódnak, mint a verseny pontjai: helyes válasz +4, rossz válasz -1, kihagyott 0; a próbaversenyen ráadásul mindenki annyi csonttal indul, ahány feladat van, így a csontok száma megegyezik a Zrínyi-pontszámmal. A javítás jobban fizet, mint egy helyes válasz: magától kijavított (vagy korábban kihagyott, most megoldott) feladatért 6 csont, tippekkel 3. A napi cél (30, 50 vagy 80 csont) a Haladásom oldalon állítható. A sorozat azt számolja, hány nap egymás után gyakorolt a gyerek; ha egy nap kimarad, "Archie takarója" megvédi (7 nap után ajándékba jár, vagy csontért vehető). Ha egy héten 5 napon gyakorol, kinyílik a heti láda. A csontokból Archie-nak ruhát, játékot, tálat és kutyaházat vehet a szekrényben; egyes dolgok csak magasabb szinttől nyílnak meg, így mindig van új cél. Ez csak játék, semmilyen előnyt nem ad. Nincs időzített értesítés, nincs sürgetés: minden csak az oldalon belül látszik.</li>
+    <li><b>Csontok, napi cél, sorozat, szekrény:</b> Archie csontjai pontosan úgy számolódnak, mint a verseny pontjai: helyes válasz +4, rossz válasz -1, kihagyott 0; a próbaversenyen ráadásul mindenki annyi csonttal indul, ahány feladat van, így a csontok száma megegyezik a Zrínyi-pontszámmal. A javításért is jár csont: egy rossz válasz magától kijavítva 5 csont, tippekkel 3; egy kihagyott feladat utólag megoldva 3, tippekkel 2. Így a rossz válasz és a kihagyás utáni javítás sosem ér többet, mint ha elsőre jól oldaná meg. A napi cél a Haladásom oldalon állítható (2-3. osztályban 20, 30 vagy 50 csont, feljebb 30, 50 vagy 80); ha meglesz, +5 csont jutalom jár. A sorozat azt számolja, hány nap egymás után gyakorolt a gyerek; ha egy nap kimarad, "Archie takarója" megvédi (7 nap után ajándékba jár, vagy csontért vehető). A heti láda 2-3. osztályban már 3 gyakorlós nap után kinyílik (+40), feljebb 5 nap után (+100). A kisebbek minden 3. befejezett kör után kis meglepetés-dobozt is kapnak (5-15 csont), és a szekrényben kevesebbet fizetnek, illetve korábbi szinttől vehetnek. A csontokból Archie-nak ruhát, kalapot, játékot, tálat, kutyaházat, kupát, párnát és hátteret vehet a szekrényben; egyes dolgok csak magasabb szinttől nyílnak meg, így mindig van új cél. Ez csak játék, semmilyen előnyt nem ad. Nincs időzített értesítés, nincs sürgetés: minden csak az oldalon belül látszik.</li>
     <li>Tipp: 10-15 perc naponta többet ér, mint egy hosszú hétvégi alkalom. Üljön le mellé, és kérje meg, hogy hangosan gondolkodjon!</li>
   </ul>
   <h2>Adatok</h2>
@@ -712,7 +749,7 @@ export const PARENTS = {
     <li><b>Автоматичні підказки й рівень:</b> якщо дитина якийсь час не відповідає, наступна підказка відкривається сама; час очікування залежить від складності задачі й класу та зростає від підказки до підказки (у пробному конкурсі ніколи). Це, а також рівень тренування ("Як на конкурсі" чи "Легше"), налаштовується на головній сторінці класу.</li>
     <li><b>Арчі:</b> маленький джек-рассел-терʼєр увесь час поруч із дитиною, підбадьорює і думає разом із нею. Під час тренування він не підказує, чи правильна відповідь, результат буде наприкінці кола.</li>
     <li><b>Виклики:</b> якщо коло здається легким, можна потренуватися на складніших конкурсних задачах (без таймера). Вони не потрапляють в інші кола.</li>
-    <li><b>Кісточки, мета дня, серія, шафа:</b> Кісточки рахуються точно як бали на конкурсі: правильна відповідь +4, неправильна -1, пропущена 0; у пробному конкурсі кожен ще й стартує з такої кількості кісточок, скільки задач, тож кісточки дорівнюють балам Zrínyi. Виправлення оплачується краще, ніж правильна відповідь: за задачу, виправлену самостійно (або раніше пропущену й тепер розвʼязану), 6 кісточок, з підказками 3. Мету дня (30, 50 або 80 кісточок) можна змінити на сторінці "Мій прогрес". Серія рахує, скільки днів поспіль дитина тренується; якщо день пропущено, "ковдрочка Арчі" зберігає серію (дається в подарунок за 7 днів поспіль або купується за кісточки). Якщо за тиждень є 5 днів тренувань, відкривається скриня тижня. За кісточки в шафі можна купити Арчі одяг, іграшку, миску й будку; деякі речі відкриваються лише з вищого рівня, тож завжди є нова мета. Це лише гра і жодних переваг не дає. Немає нагадувань за таймером і поспіху: усе видно лише всередині сайту.</li>
+    <li><b>Кісточки, мета дня, серія, шафа:</b> Кісточки рахуються точно як бали на конкурсі: правильна відповідь +4, неправильна -1, пропущена 0; у пробному конкурсі кожен ще й стартує з такої кількості кісточок, скільки задач, тож кісточки дорівнюють балам Zrínyi. За виправлення теж є кісточки: неправильна відповідь, виправлена самостійно, дає 5, з підказками 3; пропущена задача, розвʼязана потім, 3, з підказками 2. Тож неправильна відповідь чи пропуск з подальшим виправленням ніколи не дають більше, ніж правильна відповідь з першого разу. Мету дня можна змінити на сторінці "Мій прогрес" (у 2-3 класі 20, 30 або 50 кісточок, далі 30, 50 або 80); коли її виконано, є бонус +5. Серія рахує, скільки днів поспіль дитина тренується; якщо день пропущено, "ковдрочка Арчі" зберігає серію (дається в подарунок за 7 днів поспіль або купується за кісточки). Скриня тижня у 2-3 класі відкривається вже після 3 днів тренувань (+40), далі після 5 днів (+100). Молодші ще й отримують маленьку коробку-сюрприз після кожного 3-го завершеного тренування (5-15 кісточок), а в шафі платять менше і можуть купувати речі з нижчого рівня. За кісточки в шафі можна купити Арчі одяг, капелюхи, іграшки, миску, будку, кубок, подушку й фон; деякі речі відкриваються лише з вищого рівня, тож завжди є нова мета. Це лише гра і жодних переваг не дає. Немає нагадувань за таймером і поспіху: усе видно лише всередині сайту.</li>
     <li>Порада: 10-15 хвилин щодня дають більше, ніж одне довге заняття у вихідні. Сядьте поруч і попросіть дитину міркувати вголос!</li>
   </ul>
   <h2>Дані</h2>

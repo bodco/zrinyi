@@ -855,3 +855,38 @@ body.band-teen .archie-scene.sc-shop { height: calc(100px * var(--sk)); }
 .item.scene .item-prev { min-height: 85px; align-content: end; overflow: hidden; }
 .item-tag.prem { background: linear-gradient(90deg, #E0A400, #F59E0B); color: #3F2A00; }
 .item.premium:not(.owned) { border-color: #F3D9A4; }
+
+/* ---------- v11: hero backdrops, surprise gift, goal moment, "new!" marks, wave-2 shop ---------- */
+.has-bg { position: relative; isolation: isolate; overflow: hidden; border-radius: var(--radius); }
+.greet.has-bg, .shop-hero.has-bg { padding: 10px 12px 8px; box-shadow: var(--shadow); }
+.hero-bg { position: absolute; inset: 0; z-index: -1; pointer-events: none; }
+.hero-bg-svg { display: block; width: 100%; height: 100%; }
+.rhero.has-bg .hero-bg { bottom: auto; height: 190px; -webkit-mask-image: linear-gradient(180deg, #000 60%, transparent); mask-image: linear-gradient(180deg, #000 60%, transparent); }
+.rhero.has-bg::before { display: none; }
+.rhero.has-bg > .hero-bg { position: absolute; }
+.has-bg .greet-txt, .has-bg .shop-hero-t { background: rgba(255, 255, 255, .72); border-radius: 14px; padding: 6px 10px; }
+.has-bg .greet-txt .link { padding-top: 6px; padding-bottom: 6px; }
+.item-prev.bgprev { position: relative; overflow: hidden; min-height: 85px; align-content: end; }
+.item-prev.bgprev .hero-bg-svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.item-prev.bgprev .owl { position: relative; height: 62px; width: 60px; }
+.modal-bg { position: relative; overflow: hidden; border-radius: 14px; margin: -6px auto 8px; padding-top: 8px; display: grid; place-items: end center; }
+.modal-bg .hero-bg-svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.modal-bg .owl { position: relative; margin: 0 auto; }
+.item-tag.new { background: linear-gradient(90deg, #8B5CF6, #EC4899); }
+.item.is-new { border-color: #C4B5FD; }
+.mode .new-dot { flex: none; font-size: 12px; font-weight: 900; color: #fff; background: linear-gradient(90deg, #8B5CF6, #EC4899); border-radius: 999px; padding: 3px 9px; }
+.surprise, .goalcard { display: flex; align-items: center; gap: 10px; margin-top: 12px; padding: 12px 14px; border-radius: var(--radius); border: 2px solid #F9A8D4; background: linear-gradient(135deg, #FFE4F1, #FFF7CC); }
+.goalcard { border-color: #93C5FD; background: linear-gradient(135deg, #E0F2FE, #ECFDF5); }
+.surprise h3, .goalcard h3 { font-size: 19px; font-weight: 900; color: #7A2E55; margin: 0; }
+.goalcard h3 { color: #0C4A6E; }
+.surprise p, .goalcard p { margin: 2px 0 0; font-weight: 700; font-size: 14.5px; line-height: 1.35; }
+.surprise > div, .goalcard > div { min-width: 0; flex: 1; }
+.surprise .owl, .goalcard .owl { width: 60px; height: 62px; }
+.giftbox { width: 44px; height: 44px; flex: none; animation: giftshake 1s ease-in-out .5s 2; }
+@keyframes giftshake { 20% { transform: rotate(-8deg); } 40% { transform: rotate(8deg); } 60% { transform: rotate(-5deg); } 80% { transform: rotate(4deg); } }
+.goalcard .spin .owl-body-g, .goalcard .owl.spin { animation: hop .8s ease-in-out .3s 2; }
+@keyframes hop { 50% { transform: translateY(-7px) rotate(-4deg); } }
+.lv-new { color: #6D28D9; }
+.soon-gift { background: #FFF1F7; color: #7A2E55; }
+@media (max-width: 359px) { .surprise, .goalcard { padding: 10px; gap: 8px; } .surprise .owl, .goalcard .owl { width: 48px; height: 50px; } .giftbox { width: 36px; height: 36px; } .surprise h3, .goalcard h3 { font-size: 17px; } }
+@media (prefers-reduced-motion: reduce) { .giftbox, .goalcard .owl { animation: none !important; } }

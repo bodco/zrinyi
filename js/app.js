@@ -2,8 +2,7 @@ import { STR, TOPICS, BADGE_ICONS, PARENTS } from './i18n.js';
 import * as store from './store.js';
 import * as L from './logic.js';
 import * as R from './rewards.js';
-import { owl, archie, archieScene, star, bone, setOutfit } from './mascot.js';
-import * as ana from './analytics.js';
+import { owl, archie, archieScene, star, bone, setOutfit, bgSVG } from './mascot.js';
 
 const GRADES = [2, 3, 4, 5, 6, 7, 8];
 const LETTERS = ['A', 'B', 'C', 'D', 'E'];
@@ -32,27 +31,6 @@ const S = {
   autoFlash: null // {key, level}: one-shot highlight of the hint that just opened by itself
 };
 const regOf = (g) => L.regular(S.data[g]);
-ana.setContext(() => { const r = route(); return { grade: r.g || undefined, lang: S.lang }; });
-// analytics: what a problem is (never its text)
-const pmeta = (p) => (p ? { problem_id: p.id, topic: p.topic, difficulty: p.difficulty, source_type: p.source && p.source.type === 'real' ? 'real' : 'generated', challenge: p.level === 'challenge' ? 1 : 0 } : {});
-function answerEv(gr, s, i, a) {
-  const p = S.byId[s.ids[i]];
-  if (!p) return;
-  const st = ana.stats(p.id);
-  ana.ev('problem_answer', {
-    ...pmeta(p), mode: s.mode, position: i + 1, level: L.levelOf(gr),
-    answer: a || 'skip', outcome: a ? (a === p.answer ? 'correct' : 'wrong') : 'skipped', correct: a ? (a === p.answer ? 1 : 0) : undefined,
-    hints_used: (s.hints && s.hints[i]) || 0, hints_total: hintList(p).length,
-    ...st, speed: st.time_ms != null ? ana.speedBucket(st.time_ms) : undefined
-  });
-}
-function hintEv(context, auto) {
-  let p = null, level = 0, total = 0, mode;
-  if (context === 'quiz') { const s = activeSess(); if (!s) return; p = S.byId[s.ids[s.idx]]; level = (s.hints && s.hints[s.idx]) || 0; total = hintList(p).length; mode = s.mode; }
-  else { const rv = S.rv; if (!rv) return; p = S.byId[rv.list[rv.i].id]; level = rv.card.hl; total = L.hintList(p, S.lang, false).length; mode = 'review'; }
-  const st = p ? ana.stats(p.id) : {};
-  ana.ev('hint_open', { ...pmeta(p), context, mode, hint_level: level, hints_total: total, auto: auto ? 1 : 0, time_ms: st.time_ms, option_changes: st.option_changes });
-}
 
 /* ---------------- helpers ---------------- */
 const t = (k, ...a) => { const v = STR[S.lang][k]; return typeof v === 'function' ? v(...a) : v; };
@@ -79,6 +57,8 @@ function ringSVG(val, goal, to = null, cls = '') {
     <circle cx="32" cy="32" r="${RING_R}" class="ring-fg" stroke-dasharray="${RING_C.toFixed(1)}" style="stroke-dashoffset:${ringOff(val, goal)}" transform="rotate(-90 32 32)" ${to != null ? `data-off="${ringOff(to, goal)}" data-done="${done ? 1 : 0}"` : ''}/></svg>`;
 }
 const rankName = (n) => t('rankNames')[Math.min(n, t('rankNames').length) - 1];
+// backdrop bought in the shop (slot bg): drawn behind the big hero sections only
+const heroBg = (rw, id = rw && rw.outfit && rw.outfit.bg) => (id ? `<div class="hero-bg" aria-hidden="true">${bgSVG(id)}</div>` : '');
 // review gate of a grade: {sid, n} or null. Pending problems that can no longer be reviewed are dropped first.
 function gateOf(g) {
   const gr = store.grade(g);
@@ -125,7 +105,6 @@ async function loadGrade(g) {
     for (const p of arr) S.byId[p.id] = p;
   } catch (e) {
     S.data[g] = 'error';
-    ana.ev('data_error', { grade: g, message: String(e && e.message || e).slice(0, 60) });
   }
   render();
 }
@@ -225,7 +204,8 @@ function modalHTML() {
   if (!m) return '';
   let body = '';
   if (m.type === 'confirm') {
-    body = `${m.outfit ? archieScene(m.mood || 'happy', 'owl-lg sc-modal', m.outfit) : owl(m.mood || 'think', 'owl-md')}<h2 id="mt">${esc(m.title)}</h2><p>${esc(m.text)}</p>
+    const pic = m.outfit ? archieScene(m.mood || 'happy', 'owl-lg sc-modal', m.outfit) : owl(m.mood || 'think', 'owl-md');
+    body = `${m.outfit && m.outfit.bg ? `<div class="modal-bg">${bgSVG(m.outfit.bg)}${pic}</div>` : pic}<h2 id="mt">${esc(m.title)}</h2><p>${esc(m.text)}</p>
       <div class="mbtns"><button class="btn ghost" data-act="modal-no">${esc(m.no)}</button><button class="btn ${m.danger ? 'danger' : 'primary'}" data-act="modal-yes">${esc(m.yes)}</button></div>`;
   } else if (m.type === 'nickname') {
     const gr = store.grade(m.g);
@@ -367,7 +347,8 @@ function screenHome(g) {
       <div class="gate-t"><h2>${esc(t('gateTitle', gt.n))}</h2><p>${esc(t('gateSub'))}</p></div>
       <button class="btn primary big" data-act="nav" data-to="${gateHref(g, gt)}">🔍 ${t('gateBtn')}</button>
     </section>` : ''}
-    <section class="greet ${R.outfitFor(rw).house ? 'has-house' : ''}">
+    <section class="greet ${R.outfitFor(rw).house ? 'has-house' : ''} ${rw.outfit.bg ? 'has-bg' : ''}">
+      ${heroBg(rw)}
       ${archieScene(gt ? 'point' : mist ? 'point' : goalOk || sum.streak >= 2 ? 'cheer' : 'wave', 'owl-lg sc-home bob')}
       <div class="greet-txt">
         <h2 class="h-big">${esc(t('hello', gr.nickname))}</h2>
@@ -399,7 +380,7 @@ function screenHome(g) {
           const on = (rw.days[d] || 0) > 0, fz = !on && frozen.has(d);
           return `<li class="${on ? 'on' : ''} ${fz ? 'fz' : ''} ${d === today ? 'now' : ''} ${d > today ? 'fut' : ''}"><i aria-hidden="true">${on ? '🔥' : fz ? blanketIcon() : ''}</i><small>${wd[i]}</small></li>`;
         }).join('')}</ol>
-        <div class="chest ${chestOpen ? 'open' : ''}"><span aria-hidden="true">🎁</span><small>${chestOpen ? t('chestReady') : t('weekChest', Math.min(actN, R.CHEST_DAYS), R.CHEST_DAYS)}</small></div>
+        <div class="chest ${chestOpen ? 'open' : ''}"><span aria-hidden="true">🎁</span><small>${chestOpen ? t('chestReady') : t('weekChest', Math.min(actN, R.chestDays(g)), R.chestDays(g))}</small></div>
       </div>
     </section>
     ${act ? `<section class="resume">
@@ -412,7 +393,7 @@ function screenHome(g) {
       ${modeBtn('m-mock', 'nav', `data-to="#/g/${g}/mock"`, mi('🏆', t('modeMock'), t('modeMockSub', nPaper, mm)))}
       ${nch ? modeBtn('m-chal', 'start', 'data-mode="challenge"', mi('🚀', t('modeChallenge'), t('modeChallengeSub', nch))) : ''}
       <button class="mode m-mist" data-act="start" data-mode="mistakes" ${mist ? '' : 'disabled'}><span class="mi" aria-hidden="true">🔧</span><span class="mt"><b>${t('modeMistakes')}</b><small>${t('modeMistakesSub', mist)}</small></span>${mist ? `<span class="badge-n">${mist}</span>` : ''}</button>
-      <button class="mode m-shop" data-act="nav" data-to="#/g/${g}/shop"><span class="mi" aria-hidden="true">${owl('happy', 'owl-mi')}</span><span class="mt"><b>${t('modeShop')}</b><small>${t('modeShopSub')}</small></span></button>
+      <button class="mode m-shop" data-act="nav" data-to="#/g/${g}/shop"><span class="mi" aria-hidden="true">${owl('happy', 'owl-mi')}</span><span class="mt"><b>${t('modeShop')}</b><small>${t('modeShopSub')}</small></span>${R.newItems(rw).length ? `<span class="new-dot">${t('newTag')}</span>` : ''}</button>
       <button class="mode m-prog" data-act="nav" data-to="#/g/${g}/progress"><span class="mi" aria-hidden="true">📈</span><span class="mt"><b>${t('modeProgress')}</b><small>${t('modeProgressSub')}</small></span></button>
     </section>
     <section class="levelsw" aria-label="${t('levelTitle')}">
@@ -439,30 +420,35 @@ function screenShop(g) {
     const open = R.unlocked(rw, it);
     const look = R.lookWith(rw, it);
     const scene = R.SCENE_SLOTS.includes(it.slot);
+    const price = R.priceOf(rw, it), need = R.rankNeed(it, g);
+    const isNew = !owned && open && S.shopNew && S.shopNew.includes(it.id);
     // scene previews show only the item tried on, so the small picture stays readable
-    const prevLook = scene ? Object.assign({}, look, { toy: null, bowl: null, house: null, [it.slot]: it.id }) : look;
+    const prevLook = scene ? Object.assign({}, look, { toy: null, bowl: null, house: null, trophy: null, bed: null, [it.slot]: it.id }) : look;
     let btn;
     if (worn && it.id === 'navy') btn = `<span class="worn-l">✓ ${t('wearing')}</span>`;
     else if (worn) btn = `<button class="btn ghost sm" data-act="wear" data-id="${it.id}">${t('takeOff')}</button>`;
     else if (owned) btn = `<button class="btn second sm" data-act="wear" data-id="${it.id}">${t('wear')}</button>`;
-    else if (!open) btn = `<button class="btn ghost sm buy" disabled aria-label="${esc(names[it.id])}: ${esc(t('rankLockAria', R.rankNeed(it)))}">🔒 ${esc(t('rankLock', R.rankNeed(it)))}</button><small class="need">${bone()} ${it.price}</small>`;
-    else if (rw.bones >= it.price) btn = `<button class="btn primary sm buy" data-act="buy" data-id="${it.id}" aria-label="${esc(names[it.id])}: ${esc(t('bonesN', it.price))}">${bone()} ${it.price}</button>`;
-    else btn = `<button class="btn ghost sm buy" disabled aria-label="${esc(names[it.id])}: ${esc(t('bonesN', it.price))}">${bone()} ${it.price}</button><small class="need">${t('needMore', it.price - rw.bones)}</small>`;
-    return `<li class="item ${worn ? 'worn' : ''} ${owned ? 'owned' : ''} ${!open && !owned ? 'locked' : ''} ${scene ? 'scene' : ''} ${it.premium ? 'premium' : ''}">
-      ${worn && it.id !== 'navy' ? `<span class="item-tag">✓ ${t('wearing')}</span>` : it.premium && !owned ? `<span class="item-tag prem">✨ ${t('premium')}</span>` : ''}
-      <span class="item-prev">${(scene ? archieScene : archie)('happy', 'owl-item', prevLook)}</span>
+    else if (!open) btn = `<button class="btn ghost sm buy" disabled aria-label="${esc(names[it.id])}: ${esc(t('rankLockAria', need))}">🔒 ${esc(t('rankLock', need))}</button><small class="need">${bone()} ${price}</small>`;
+    else if (rw.bones >= price) btn = `<button class="btn primary sm buy" data-act="buy" data-id="${it.id}" data-price="${price}" aria-label="${esc(names[it.id])}: ${esc(t('bonesN', price))}">${bone()} ${price}</button>`;
+    else btn = `<button class="btn ghost sm buy" disabled data-price="${price}" aria-label="${esc(names[it.id])}: ${esc(t('bonesN', price))}">${bone()} ${price}</button><small class="need">${t('needMore', price - rw.bones)}</small>`;
+    const prev = it.slot === 'bg' ? `<span class="item-prev bgprev">${bgSVG(it.id)}${archie('happy', 'owl-item')}</span>`
+      : `<span class="item-prev">${(scene ? archieScene : archie)('happy', 'owl-item', prevLook)}</span>`;
+    return `<li class="item ${worn ? 'worn' : ''} ${owned ? 'owned' : ''} ${!open && !owned ? 'locked' : ''} ${scene ? 'scene' : ''} ${it.premium ? 'premium' : ''} ${isNew ? 'is-new' : ''}" data-item="${it.id}">
+      ${worn && it.id !== 'navy' ? `<span class="item-tag">✓ ${t('wearing')}</span>` : isNew ? `<span class="item-tag new">✨ ${t('newTag')}</span>` : it.premium && !owned ? `<span class="item-tag prem">✨ ${t('premium')}</span>` : ''}
+      ${prev}
       <b>${esc(names[it.id])}</b>${btn}</li>`;
   };
   const shelf = (slot) => {
-    const list = R.ITEMS.filter((it) => it.slot === slot).sort((x, y) => x.price - y.price);
+    const list = R.ITEMS.filter((it) => it.slot === slot).sort((x, y) => x.price - y.price || (x.wave || 1) - (y.wave || 1));
     const have = list.filter((it) => rw.owned.includes(it.id) && it.price > 0).length, all = list.filter((it) => it.price > 0).length;
     return `<section class="shelf" data-slot="${slot}"><h3><span>${t('slots')[slot]}</span><small>${have}/${all}</small></h3><ul class="items">${list.map(card).join('')}</ul></section>`;
   };
-  const group = (key, slots) => `<div class="shop-group"><h2 class="sg-h"><span aria-hidden="true">${key === 'wear' ? '👕' : '🏡'}</span> ${t('slotGroups')[key]}</h2>${slots.map(shelf).join('')}</div>`;
+  const group = (key, slots) => `<div class="shop-group"><h2 class="sg-h"><span aria-hidden="true">${{ wear: '👕', home: '🏡', bg: '🖼️' }[key]}</span> ${t('slotGroups')[key]}</h2>${slots.map(shelf).join('')}</div>`;
   const canBlanket = rw.freezes < L.FREEZE_MAX;
   return `${topBar({ back: `#/g/${g}`, title: t('shopTitle'), sub: gr.nickname ? `${gr.nickname}, ${t('gradeN', g)}` : t('gradeN', g) })}
   <main class="wrap shop">
-    <section class="shop-hero ${R.outfitFor(rw).house ? 'has-house' : ''}">
+    <section class="shop-hero ${R.outfitFor(rw).house ? 'has-house' : ''} ${rw.outfit.bg ? 'has-bg' : ''}">
+      ${heroBg(rw)}
       ${archieScene('cheer', 'owl-hero sc-shop pop')}
       <div class="shop-hero-t">
         <span class="bones-pill big" aria-label="${esc(t('bonesN', rw.bones))}">${bone()}<b>${rw.bones}</b></span>
@@ -470,7 +456,8 @@ function screenShop(g) {
       </div>
     </section>
     ${group('wear', R.WEAR_SLOTS)}
-    ${group('home', ['house', 'toy', 'bowl'])}
+    ${group('home', ['house', 'bed', 'toy', 'trophy', 'bowl'])}
+    ${group('bg', R.BG_SLOTS)}
     <section class="shelf extra"><h3><span>${t('slots').extra}</span></h3>
       <div class="blanket-card">
         <span class="blk-big">${blanketIcon()}</span>
@@ -600,7 +587,8 @@ function screenResults(g, id) {
   const gt = gateOf(g);
   return `${topBar({ back: `#/g/${g}`, title: t('modeNames')[rec.mode] + (rec.topic ? `: ${topicName(rec.topic)}` : '') })}
   <main class="wrap results">
-    <section class="rhero s${stars}">
+    <section class="rhero s${stars} ${gr.rw && gr.rw.outfit.bg ? 'has-bg' : ''}">
+      ${heroBg(gr.rw)}
       ${archieScene(stars >= 1 || chal ? 'cheer' : 'oops', 'owl-lg sc-res pop')}
       <h2 class="h-big">${title}</h2>
       ${chal ? '' : starsRow(stars, 'lg pop-stars')}
@@ -666,10 +654,22 @@ function rewardBlock(rec) {
     ${chips ? `<div class="rw-parts">${chips}</div>` : ''}
     <div class="rw-lv"><span class="lv-num sm" aria-hidden="true">${lvNow.n}</span><span class="xpbar"><i style="width:${lvNow.max ? 100 : Math.round((lvNow.into / lvNow.need) * 100)}%"></i></span><small>${esc(rankName(lvNow.n))}</small></div>
   </section>
-  ${fx.levelUp ? `<section class="levelup">${owl('cheer', 'owl-lg pop')}<div><h3>${t('levelUpTitle')}</h3><p>${esc(t('levelUpText', fx.levelUp, rankName(fx.levelUp)))}</p></div></section>` : ''}
-  ${fx.chest ? `<section class="chestcard"><span class="chest-ic" aria-hidden="true">🎁</span><div><h3>${t('chestTitle')}</h3><p>${esc(t('chestText', fx.chest))}</p></div></section>` : ''}
+  ${fx.surprise ? `<section class="surprise">${owl('cheer', 'owl-md pop')}${giftBox()}<div><h3>${t('surpriseTitle')}</h3><p>${esc(t('surpriseText', fx.surprise))}</p></div></section>` : ''}
+  ${fx.goalBonus ? `<section class="goalcard">${owl('cheer', 'owl-md spin')}<div><h3>🎯 ${t('goalBonusTitle')}</h3><p>${esc(t('goalBonusText', fx.goalBonus))}</p></div></section>` : ''}
+  ${fx.levelUp ? `<section class="levelup">${owl('cheer', 'owl-lg pop')}<div><h3>${t('levelUpTitle')}</h3><p>${esc(t('levelUpText', fx.levelUp, rankName(fx.levelUp)))}</p>${fx.newN ? `<p class="lv-new">✨ ${esc(t('levelUpNew', fx.newN))}</p>` : ''}</div></section>` : ''}
+  ${fx.chest ? `<section class="chestcard"><span class="chest-ic" aria-hidden="true">🎁</span><div><h3>${t('chestTitle')}</h3><p>${esc(t('chestText', fx.chest, R.chestDays(route().g)))}</p></div></section>` : ''}
+  ${fx.surpriseIn && !fx.surprise ? `<p class="rinfo soon-gift"><span aria-hidden="true">🎁</span> ${esc(t('surpriseIn', fx.surpriseIn))}</p>` : ''}
   ${fx.freezeUsed ? `<p class="rinfo">${blanketIcon()} ${esc(t('freezeUsed', fx.freezeUsed))}</p>` : ''}
   ${fx.freezeEarned ? `<p class="rinfo">${blanketIcon()} ${esc(t('freezeEarned'))}</p>` : ''}`;
+}
+// the surprise gift box (young band), a small flat drawing in Archie's style
+function giftBox() {
+  return `<svg class="giftbox pop" viewBox="0 0 48 48" aria-hidden="true" focusable="false">
+    <path d="M8 21 H40 V42 Q40 44 38 44 H10 Q8 44 8 42 Z" fill="#F472B6" stroke="#5B3A22" stroke-width="1.8" stroke-linejoin="round"/>
+    <path d="M5 14 H43 V22 H5 Z" fill="#EC4899" stroke="#5B3A22" stroke-width="1.8" stroke-linejoin="round"/>
+    <path d="M21 14 H27 V44 H21 Z" fill="#FFC83D" stroke="#5B3A22" stroke-width="1.5" stroke-linejoin="round"/>
+    <path d="M24 14 C18 4 9 6 12 11 C14 14 20 14 24 14 C28 14 34 14 36 11 C39 6 30 4 24 14 Z" fill="#FFC83D" stroke="#5B3A22" stroke-width="1.6" stroke-linejoin="round"/>
+    <path d="M12 25 v6 M34 26 v4" stroke="#FBCFE8" stroke-width="2.2" stroke-linecap="round"/></svg>`;
 }
 // count-up and ring fill on the results screen, once per finished session
 function animateRewards() {
@@ -706,7 +706,6 @@ function initReview(g, sid, startAt) {
   let i = 0;
   if (startAt != null) { const k = list.findIndex((x) => x.n === +startAt + 1); if (k >= 0) i = k; }
   S.rv = { g, sid: rec.id, list, i, solvedSelf: 0, solvedHints: 0, bones: 0, card: null, done: false };
-  ana.ev('review_start', { items: list.length, from_gate: startAt == null && pr && pr.sid === rec.id ? 1 : 0, session_mode: rec.mode, start_at: startAt == null ? undefined : +startAt + 1 });
   newCard();
   return S.rv;
 }
@@ -857,7 +856,7 @@ function screenProgress(g) {
     ${sum.sessions ? `<p class="unaided">💡 <b>${sum.unaided}</b> ${t('unaided')}</p>` : ''}
     <section class="levelsw goalsw" aria-label="${t('goalTitle')}">
       <span class="lv-t">🎯 ${t('goalTitle')}</span>
-      <div class="seg three" role="group">${R.GOALS.map((v) => `<button type="button" data-act="goal" data-v="${v}" aria-pressed="${gr.rw.goal === v}"><b>${v}</b> ${t('goalNames')[v]}</button>`).join('')}</div>
+      <div class="seg three" role="group">${R.goalsFor(g).map((v, i) => `<button type="button" data-act="goal" data-v="${v}" aria-pressed="${gr.rw.goal === v}"><b>${v}</b> ${t('goalNames')[i]}</button>`).join('')}</div>
       <small class="lv-d">${t('goalDesc')}</small>
     </section>
     <div class="pgrid">
@@ -871,8 +870,8 @@ function screenProgress(g) {
       </section>
     </div>
     <section class="card">
-      <h3>${t('badges')} <small class="muted">${have.size}/${L.BADGE_ORDER.length}</small></h3>
-      <ul class="badges">${L.BADGE_ORDER.map((b) => `<li class="${have.has(b) ? 'on' : 'off'}"><span class="bi" aria-hidden="true">${have.has(b) ? BADGE_ICONS[b] : '🔒'}</span><b>${esc(t('badgeDefs')[b][0])}</b><small>${esc(t('badgeDefs')[b][1])}</small></li>`).join('')}</ul>
+      <h3>${t('badges')} <small class="muted">${L.badgeOrder(gr).filter((b) => have.has(b)).length}/${L.badgeOrder(gr).length}</small></h3>
+      <ul class="badges">${L.badgeOrder(gr).map((b) => `<li class="${have.has(b) ? 'on' : 'off'}"><span class="bi" aria-hidden="true">${have.has(b) ? BADGE_ICONS[b] : '🔒'}</span><b>${esc(t('badgeDefs')[b][0])}</b><small>${esc(t('badgeDefs')[b][1])}</small></li>`).join('')}</ul>
     </section>
     <section class="card">
       <h3>${t('history')}</h3>
@@ -916,6 +915,9 @@ function render() {
       const gr = store.grade(g);
       if (r.name === 'quiz' && !(gr.active && gr.active.ids.every((id) => S.byId[id]))) { setTimeout(() => go(`#/g/${g}`), 0); return; }
       if (r.name === 'quiz' && gr.active.paused && !S.modal) S.modal = { type: 'pause' };
+      // "new!" marks: what became buyable since the last shop visit; marked as seen when the shop opens
+      if (r.name === 'shop' && S.shopFor !== g) { S.shopFor = g; S.shopNew = R.newItems(gr.rw); R.markSeen(gr.rw); store.save(); }
+      if (r.name !== 'shop') { S.shopFor = null; S.shopNew = null; }
       if (r.name === 'home') html = screenHome(g);
       else if (r.name === 'shop') html = screenShop(g);
       else if (r.name === 'mock') html = screenMockIntro(g);
@@ -926,13 +928,6 @@ function render() {
       else html = screenHome(g);
       if (r.name === 'home' && !gr.asked && !S.modal) S.modal = { type: 'nickname', g };
     }
-  }
-  ana.page(r);
-  { // per-problem timing follows what is on screen
-    const s = r.name === 'quiz' ? activeSess() : null;
-    if (s && s.ids[s.idx]) ana.focusProblem(`q:${s.grade}:${s.started}`, s.ids[s.idx]);
-    else if (r.name === 'review' && S.rv && !S.rv.done && S.rv.list[S.rv.i]) ana.focusProblem(`r:${S.rv.g}:${S.rv.sid}`, S.rv.list[S.rv.i].id);
-    else ana.blurProblem();
   }
   const key = location.hash + '|' + (S.rv ? `${S.rv.i}` : '') + '|' + (r.name === 'quiz' ? activeSess() && activeSess().idx : '');
   const changed = key !== S.lastScreen;
@@ -973,7 +968,7 @@ async function startSession(mode, topic) {
   const all = S.data[g];
   const gr = store.grade(g);
   const gt = mode !== 'mistakes' ? gateOf(g) : null;
-  if (gt) { ana.ev('gate_blocked', { mode, pending: gt.n }); gateToast(gt); if (route().name !== 'home') go(`#/g/${g}`); return; }
+  if (gt) { gateToast(gt); if (route().name !== 'home') go(`#/g/${g}`); return; }
   const old = gr.active && gr.active.ids.every((id) => S.byId[id]) ? gr.active : null;
   if (old && (old.idx > 0 || old.answers.some(Boolean))) {
     const done = old.answers.filter((a, i) => i < old.idx || a).length;
@@ -984,8 +979,6 @@ async function startSession(mode, topic) {
   if (!probs.length) { toast(esc(t('modeMistakesSub', 0)), 2500, 'think'); go(`#/g/${g}`); return; }
   gr.active = L.newSession(g, mode, topic, probs);
   store.save();
-  ana.ev('quiz_start', { mode, n: probs.length, level: L.levelOf(gr), topic: topic || undefined, replaced: old ? 1 : 0, sessions_before: gr.sessions.length });
-  ana.setUser({ grades_played: Object.keys(store.load().grades).sort().join(',') });
   S.sel = null;
   S.lockUntil = Date.now() + 300;
   S.modal = null;
@@ -1018,28 +1011,18 @@ function finishQuiz(timeUp) {
   if (!s) return;
   tickNow();
   const topicsInData = [...new Set(regOf(g).map((p) => p.topic))];
-  if (s.mode === 'mock') s.ids.forEach((id, i) => answerEv(gr, s, i, s.answers[i])); // practice answers are sent as they happen
-  const hintsTotal = (s.hints || []).reduce((a, b) => a + (b || 0), 0);
   const { record, newBadges, streakRes } = L.finishSession(gr, s, S.byId, topicsInData);
   const fx = R.awardSession(gr, record, streakRes);
-  const more = L.checkBadges(gr, S.byId, topicsInData); // badges tied to bones, levels and the chest
+  if (fx.levelUp) fx.newN = R.newItems(gr.rw).length;
+  const more = L.checkBadges(gr, S.byId, topicsInData); // badges tied to bones, levels, the chest and the goal
   store.save();
-  ana.ev('quiz_finish', {
-    mode: record.mode, n: record.n, correct: record.correct, wrong: record.wrong, skipped: record.skipped,
-    acc_pct: Math.round(record.acc * 100), score: record.score == null ? undefined : record.score, duration_s: record.timeSec,
-    sec_per_problem: record.n ? Math.round(record.timeSec / record.n) : undefined, time_up: timeUp ? 1 : 0, hints_used: hintsTotal,
-    bones: record.bones, streak: gr.streak && gr.streak.count, level: L.levelOf(gr), stars: L.starsOf(record.acc)
-  });
-  newBadges.concat(more).forEach((b) => ana.ev('badge_earned', { badge_id: String(b) }));
-  if (fx.levelUp) ana.ev('level_up', { rank: fx.levelUp });
-  if (fx.chest) ana.ev('chest_open', {});
   S.newBadges = { sid: record.id, ids: newBadges.concat(more) };
   S.rwFx = Object.assign({ sid: record.id, animated: false }, fx);
   S.modal = null;
   S.rv = null;
   go(`#/g/${g}/results/${record.id}`);
   if (timeUp) toast(t('timeUp'), 3000, 'oops');
-  if (L.starsOf(record.acc) >= 2 || fx.levelUp || fx.chest) setTimeout(() => confetti(), 250);
+  if (L.starsOf(record.acc) >= 2 || fx.levelUp || fx.chest || fx.surprise || fx.goalBonus) setTimeout(() => confetti(), 250);
 }
 
 function tickNow() {
@@ -1160,7 +1143,6 @@ function ahFire() {
   if (document.hidden || S.modal) { AH.remaining = 0; return; }
   if (!ctx.open()) { syncAutoHint(); return; }
   const level = ctx.opened + 1;
-  hintEv(ctx.key.startsWith('q:') ? 'quiz' : 'review', true);
   S.hintLock = Date.now() + 600; // a tap landing at the same moment must not open a second level
   S.autoSaid = { key: ctx.key, level };
   S.autoFlash = { key: ctx.key, level };
@@ -1213,17 +1195,16 @@ function failedSeen() {
 /* ---------------- actions ---------------- */
 const A = {
   nav(el) { go(el.dataset.to); },
-  lang(el) { setLang(el.dataset.l); ana.ev('lang_change', { to: S.lang, screen: route().name }); ana.setUser({ ui_lang: S.lang }); S.keepScroll = true; S.lastScreen = location.hash + '|' + (S.rv ? `${S.rv.i}` : '') + '|' + (route().name === 'quiz' ? activeSess() && activeSess().idx : ''); render(); },
+  lang(el) { setLang(el.dataset.l); S.keepScroll = true; S.lastScreen = location.hash + '|' + (S.rv ? `${S.rv.i}` : '') + '|' + (route().name === 'quiz' ? activeSess() && activeSess().idx : ''); render(); },
   'retry-load'(el) { S.data[+el.dataset.g] = undefined; render(); },
   'edit-name'() { openModal({ type: 'nickname', g: route().g }); },
-  'nick-skip'() { ana.ev('nickname_skip', {}); const gr = store.grade(route().g); gr.asked = true; store.save(); closeModal(); },
-  level(el) { const gr = store.grade(route().g); gr.level = el.dataset.lv; ana.ev('level_set', { level: el.dataset.lv }); store.save(); S.keepScroll = true; render(); },
+  'nick-skip'() { const gr = store.grade(route().g); gr.asked = true; store.save(); closeModal(); },
+  level(el) { const gr = store.grade(route().g); gr.level = el.dataset.lv; store.save(); S.keepScroll = true; render(); },
   start(el) { startSession(el.dataset.mode, el.dataset.topic); },
-  gated(el) { const gt = gateOf(route().g); if (gt) { ana.ev('gate_blocked', { mode: el && el.dataset.mode, pending: gt.n }); gateToast(gt); } else render(); },
+  gated() { const gt = gateOf(route().g); if (gt) gateToast(gt); else render(); },
   hint() {
     if (Date.now() < S.hintLock) return;
     if (!openQuizHint()) return;
-    hintEv('quiz', false);
     S.hintLock = Date.now() + 300;
     S.keepScroll = true; S.scrollToFocus = true;
     render();
@@ -1231,7 +1212,6 @@ const A = {
   'rv-hint'() {
     if (Date.now() < S.hintLock) return;
     if (!openReviewHint()) return;
-    hintEv('review', false);
     S.hintLock = Date.now() + 300;
     S.keepScroll = true; S.scrollToFocus = true;
     render();
@@ -1239,7 +1219,6 @@ const A = {
   autohints() {
     const gr = store.grade(route().g);
     gr.autoHints = !autoOn(gr);
-    ana.ev('autohints_toggle', { on: autoOn(gr) ? 1 : 0 });
     store.save();
     S.keepScroll = true;
     render();
@@ -1249,64 +1228,59 @@ const A = {
     const c = S.rv.card;
     if (c.status !== 'trying') return;
     c.status = 'failed'; c.showSol = true; c.steps = 1; c.sel = null;
-    { const p = S.byId[S.rv.list[S.rv.i].id]; ana.ev('review_giveup', { ...pmeta(p), attempts: c.tried.length, hints_used: c.hl, ...ana.stats(p.id) }); }
     failedSeen();
     S.lockUntil = Date.now() + 300;
     S.keepScroll = true; S.scrollToFocus = true;
     render();
   },
   again(el) { startSession(el.dataset.mode, el.dataset.topic || null); },
-  resume() { const s0 = store.grade(route().g).active; if (s0) ana.ev('quiz_resume', { mode: s0.mode, position: s0.idx + 1, n: s0.ids.length }); S.sel = null; S.lockUntil = Date.now() + 300; go(`#/g/${route().g}/quiz`); },
+  resume() { S.sel = null; S.lockUntil = Date.now() + 300; go(`#/g/${route().g}/quiz`); },
   async discard() {
     const ok = await confirmBox({ title: t('quitTitle'), text: t('quitText'), yes: t('discard'), no: t('stay'), danger: true });
     if (!ok) return;
-    const gr = store.grade(route().g); if (gr.active) ana.ev('quiz_discard', { mode: gr.active.mode, position: gr.active.idx + 1, n: gr.active.ids.length }); gr.active = null; store.save(); render();
+    const gr = store.grade(route().g); gr.active = null; store.save(); render();
   },
   opt(el) {
     if (locked()) return;
     const s = activeSess();
     const l = el.dataset.l;
-    ana.picked(s.ids[s.idx]);
     if (s.mode === 'mock') { s.answers[s.idx] = l; store.save(); }
     else { S.sel = l; ahRestartGap(); }
     S.keepScroll = true;
     render();
   },
-  done() { if (locked() || !S.sel) return; const s = activeSess(); s.answers[s.idx] = S.sel; answerEv(store.grade(route().g), s, s.idx, S.sel); advance(); },
-  skip() { if (locked()) return; const s = activeSess(); s.answers[s.idx] = null; answerEv(store.grade(route().g), s, s.idx, null); advance(); },
+  done() { if (locked() || !S.sel) return; const s = activeSess(); s.answers[s.idx] = S.sel; advance(); },
+  skip() { if (locked()) return; const s = activeSess(); s.answers[s.idx] = null; advance(); },
   async quit() {
     const s = activeSess();
     if (s && s.mode === 'full') {
       const keep = await confirmBox({ title: t('quitFullTitle'), text: t('quitFullText'), yes: t('quitFullYes'), no: t('stay'), mood: 'sleep' });
       if (!keep) return;
-      ana.ev('quiz_quit', { mode: s.mode, position: s.idx + 1, n: s.ids.length, answered: s.answers.filter(Boolean).length, kept: 1 });
       tickNow(); S.sel = null; store.save();
       go(`#/g/${route().g}`);
       return;
     }
     const ok = await confirmBox({ title: t('quitTitle'), text: t('quitText'), yes: t('leave'), no: t('stay'), mood: 'oops', danger: true });
     if (!ok) return;
-    if (s) ana.ev('quiz_quit', { mode: s.mode, position: s.idx + 1, n: s.ids.length, answered: s.answers.filter(Boolean).length, kept: 0, elapsed_s: Math.round(s.elapsed / 1000) });
     const g = route().g;
     const gr = store.grade(g);
     if (gr.active === s) gr.active = null;
     store.save();
     go(`#/g/${g}`);
   },
-  'mock-next'() { if (locked()) return; const s = activeSess(); if (s.idx < s.ids.length - 1) { if (!s.answers[s.idx]) ana.ev('mock_skip', { ...pmeta(S.byId[s.ids[s.idx]]), position: s.idx + 1 }); s.idx++; S.lockUntil = Date.now() + 250; store.save(); render(); } },
-  'mock-prev'() { if (locked()) return; const s = activeSess(); if (s.idx > 0) { ana.ev('mock_back', { position: s.idx + 1 }); s.idx--; S.lockUntil = Date.now() + 250; store.save(); render(); } },
-  'mock-clear'() { const s = activeSess(); ana.ev('answer_clear', { ...pmeta(S.byId[s.ids[s.idx]]), position: s.idx + 1 }); s.answers[s.idx] = null; store.save(); S.keepScroll = true; render(); },
-  grid() { ana.ev('mock_grid', {}); openModal({ type: 'grid' }); },
-  jump(el) { const s = activeSess(); ana.ev('mock_jump', { from: s.idx + 1, to: +el.dataset.i + 1, answered: s.answers.filter(Boolean).length }); s.idx = +el.dataset.i; store.save(); S.modal = null; render(); },
+  'mock-next'() { if (locked()) return; const s = activeSess(); if (s.idx < s.ids.length - 1) { s.idx++; S.lockUntil = Date.now() + 250; store.save(); render(); } },
+  'mock-prev'() { if (locked()) return; const s = activeSess(); if (s.idx > 0) { s.idx--; S.lockUntil = Date.now() + 250; store.save(); render(); } },
+  'mock-clear'() { const s = activeSess(); s.answers[s.idx] = null; store.save(); S.keepScroll = true; render(); },
+  grid() { openModal({ type: 'grid' }); },
+  jump(el) { const s = activeSess(); s.idx = +el.dataset.i; store.save(); S.modal = null; render(); },
   async 'mock-finish'() {
     const s = activeSess();
     const u = s.answers.filter((a) => !a).length;
     S.modal = null;
-    ana.ev('mock_finish_ask', { unanswered: u, left_s: Math.round((s.limit - s.elapsed) / 1000) });
     const ok = await confirmBox({ title: t('finishTitle'), text: t('finishText', u), yes: t('finishYes'), no: t('finishNo'), mood: u ? 'think' : 'cheer' });
     if (ok) finishQuiz();
   },
-  pause() { tickNow(); const s = activeSess(); ana.ev('quiz_pause', { mode: s.mode, position: s.idx + 1, left_s: s.limit ? Math.round((s.limit - s.elapsed) / 1000) : undefined }); s.paused = true; store.save(); openModal({ type: 'pause' }); },
+  pause() { tickNow(); const s = activeSess(); s.paused = true; store.save(); openModal({ type: 'pause' }); },
   unpause() { const s = activeSess(); S.lastTick = Date.now(); s.paused = false; store.save(); closeModal(); },
   'modal-yes'() { const m = S.modal; closeModal(); m && m.resolve && m.resolve(true); },
   'modal-no'() { const m = S.modal; closeModal(); m && m.resolve && m.resolve(false); },
@@ -1325,17 +1299,12 @@ const A = {
   },
   'dbg-timeup'() { const s = activeSess(); s.elapsed = s.limit - 3000; },
   // review
-  'rv-opt'(el) { if (locked()) return; const c = S.rv.card; if (c.status !== 'trying' || c.tried.includes(el.dataset.l)) return; ana.picked(S.rv.list[S.rv.i].id); c.sel = el.dataset.l; ahRestartGap(); S.keepScroll = true; render(); },
+  'rv-opt'(el) { if (locked()) return; const c = S.rv.card; if (c.status !== 'trying' || c.tried.includes(el.dataset.l)) return; c.sel = el.dataset.l; ahRestartGap(); S.keepScroll = true; render(); },
   'rv-check'() {
     if (locked()) return;
     const rv = S.rv, c = rv.card, it = rv.list[rv.i], p = S.byId[it.id];
     if (!c.sel) return;
     S.lockUntil = Date.now() + 400;
-    {
-      const ok = c.sel === p.answer;
-      const st = ana.stats(p.id);
-      ana.ev('review_answer', { ...pmeta(p), attempt: c.tried.length - (c.orig ? 1 : 0) + 1, answer: c.sel, outcome: ok ? 'correct' : c.tried.length + 1 >= 2 ? 'failed' : 'wrong', correct: ok ? 1 : 0, hints_used: c.hl, was_skipped: c.orig ? 0 : 1, ...st, speed: ana.speedBucket(st.time_ms || 0) });
-    }
     if (c.sel === p.answer) {
       c.status = 'solved';
       if (c.hl) rv.solvedHints++; else rv.solvedSelf++;
@@ -1350,7 +1319,8 @@ const A = {
       rvItemDone();
       if (got) {
         rv.bones += got.n + got.chest;
-        const msg = got.levelUp ? `${t('levelUpTitle')} ${rankName(got.levelUp)}` : got.goalHit ? t('goalHitToast') : got.chest ? t('chestTitle') : t('plusBones', got.n);
+        rv.bones += got.goalBonus || 0;
+        const msg = got.levelUp ? `${t('levelUpTitle')} ${rankName(got.levelUp)}` : got.goalHit ? t('goalHitBonus', got.goalBonus) : got.chest ? t('chestTitle') : t('plusBones', got.n);
         setTimeout(() => toast(`${bone()} ${esc(msg)}`, 2200, 'cheer'), 60);
       }
       confetti(40);
@@ -1367,39 +1337,39 @@ const A = {
       if (el) el.scrollIntoView({ block: 'nearest', behavior: reduceMotion() ? 'auto' : 'smooth' });
     }
   },
-  'rv-sol'() { const c = S.rv.card; ana.ev('solution_open', { ...pmeta(S.byId[S.rv.list[S.rv.i].id]), after: c.status }); c.showSol = true; c.steps = 1; S.keepScroll = true; S.scrollToFocus = true; render(); },
-  'rv-step'() { if (locked()) return; S.lockUntil = Date.now() + 250; const c = S.rv.card; c.steps++; { const p = S.byId[S.rv.list[S.rv.i].id]; ana.ev('solution_step', { ...pmeta(p), step: c.steps, steps_total: p.steps[S.lang].length, after: c.status }); } failedSeen(); S.keepScroll = true; S.scrollToFocus = true; render(); },
+  'rv-sol'() { const c = S.rv.card; c.showSol = true; c.steps = 1; S.keepScroll = true; S.scrollToFocus = true; render(); },
+  'rv-step'() { if (locked()) return; S.lockUntil = Date.now() + 250; const c = S.rv.card; c.steps++; failedSeen(); S.keepScroll = true; S.scrollToFocus = true; render(); },
   'rv-next'() {
     if (locked()) return;
     const rv = S.rv;
     S.lockUntil = Date.now() + 400;
-    if (rv.i >= rv.list.length - 1) { ana.ev('review_finish', { items: rv.list.length, solved_self: rv.solvedSelf, solved_hints: rv.solvedHints, bones: rv.bones }); rv.done = true; render(); if (rv.solvedSelf) confetti(); return; }
+    if (rv.i >= rv.list.length - 1) { rv.done = true; render(); if (rv.solvedSelf) confetti(); return; }
     rv.i++;
     S.hintLock = 0;
     newCard();
     render();
   },
-  goal(el) { const gr = store.grade(route().g); gr.rw.goal = +el.dataset.v; ana.ev('goal_set', { goal: +el.dataset.v }); store.save(); S.keepScroll = true; render(); },
+  goal(el) { const g = route().g, gr = store.grade(g); const v = +el.dataset.v; if (!R.goalsFor(g).includes(v)) return; gr.rw.goal = v; store.save(); S.keepScroll = true; render(); },
   // wardrobe
   async buy(el) {
     const g = route().g;
     const gr = store.grade(g);
     const id = el.dataset.id;
     const it = R.itemById(id);
-    const price = id === 'blanket' ? R.BLANKET_PRICE : it.price;
+    const price = id === 'blanket' ? R.BLANKET_PRICE : R.priceOf(gr.rw, it);
     const name = id === 'blanket' ? t('blanketName') : t('items')[id];
     const look = it ? R.lookWith(gr.rw, it) : null;
     const ok = await confirmBox({ title: t('buyTitle', name), text: t('buyText', price, gr.rw.bones - price), yes: t('buyYes'), no: t('cancel'), mood: 'happy', outfit: look });
-    if (!ok) { ana.ev('shop_cancel', { item_id: id, price }); return; }
-    if (!R.buy(gr, id)) return;
+    if (!ok || !R.buy(gr, id)) return;
+    const nb = L.checkBadges(gr, S.byId, [...new Set(regOf(g).map((q) => q.topic))]); // "first gift" badge
     store.save();
-    ana.ev('shop_buy', { item_id: id, price, bones_left: gr.rw.bones, owned: gr.rw.owned.length });
     S.keepScroll = true;
     render();
     confetti(40);
     toast(esc(t('bought')), 2200, 'cheer');
+    if (nb.length) setTimeout(() => toast(`${BADGE_ICONS[nb[0]]} ${esc(t('newBadge'))} ${esc(t('badgeDefs')[nb[0]][0])}`, 2600, 'cheer'), 2300);
   },
-  wear(el) { const gr = store.grade(route().g); if (R.toggleWear(gr, el.dataset.id)) { ana.ev('outfit_change', { item_id: el.dataset.id }); store.save(); S.keepScroll = true; render(); } },
+  wear(el) { const gr = store.grade(route().g); if (R.toggleWear(gr, el.dataset.id)) { store.save(); S.keepScroll = true; render(); } },
   // progress
   export() {
     const data = JSON.stringify(store.exportData(), null, 1);
@@ -1409,14 +1379,12 @@ const A = {
     a.download = `zrinyi-haladas-${L.dayKey()}.json`;
     document.body.appendChild(a); a.click(); a.remove();
     setTimeout(() => URL.revokeObjectURL(a.href), 2000);
-    ana.ev('progress_export', {});
     toast(t('exportOk'));
   },
   async reset() {
     const g = route().g;
     const ok = await confirmBox({ title: t('resetTitle'), text: t('resetText', g), yes: t('resetYes'), no: t('cancel'), mood: 'oops', danger: true });
     if (!ok) return;
-    ana.ev('grade_reset', { grade: g });
     store.resetGrade(g);
     render();
   }
@@ -1438,7 +1406,6 @@ document.addEventListener('submit', (ev) => {
   const gr = store.grade(g);
   gr.nickname = (f.nick.value || '').trim().slice(0, 16);
   gr.asked = true;
-  ana.ev('nickname_set', { has_name: gr.nickname ? 1 : 0 }); // the name itself is never sent
   store.save();
   closeModal();
   render();
@@ -1455,7 +1422,6 @@ document.addEventListener('change', async (ev) => {
   const ok = await confirmBox({ title: t('importTitle'), text: t('importText', gs), yes: t('importYes'), no: t('cancel') });
   if (!ok) return;
   store.applyImport(parsed);
-  ana.ev('progress_import', { grades: Object.keys(parsed).sort().join(',') });
   render();
   toast(t('importOk'), 2500, 'cheer');
 });
@@ -1487,7 +1453,6 @@ document.addEventListener('visibilitychange', () => { if (document.hidden && rou
   let l = st.lang;
   if (!l) l = 'hu';
   setLang(l);
-  ana.setUser({ ui_lang: S.lang });
   render();
   if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
     navigator.serviceWorker.register('sw.js').catch(() => {});

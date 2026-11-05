@@ -30,7 +30,7 @@
 Задачі з `"level":"challenge"` при рівні "Легше" не потрапляють у швидке, повне тренування і пробний конкурс (при рівні "Як на конкурсі" можуть потрапити). Окремий режим "Kihívás / Виклик" показує до 5 challenge-задач плюс найважчі задачі складності 3, разом 8, без таймера). Режим зʼявляється, лише якщо в класі є такі задачі. Ці сесії не впливають на відсоток правильних.
 
 ## READY_GRADES
-У `js/logic.js` константа `READY_GRADES = [2, 5]` визначає, які класи вважаються готовими. Решта плиток на стартовому екрані отримують позначку "Hamarosan / Незабаром", але лишаються клікабельними і ведуть на екран "coming soon" (він показується, коли файл даних порожній). Коли додаєш новий клас, заповни `data/gN.json` і додай номер у `READY_GRADES`. Після змін у файлах підніми `VERSION` у `sw.js` (зараз `zrinyi-v10`).
+У `js/logic.js` константа `READY_GRADES = [2, 5]` визначає, які класи вважаються готовими. Решта плиток на стартовому екрані отримують позначку "Hamarosan / Незабаром", але лишаються клікабельними і ведуть на екран "coming soon" (він показується, коли файл даних порожній). Коли додаєш новий клас, заповни `data/gN.json` і додай номер у `READY_GRADES`. Після змін у файлах підніми `VERSION` у `sw.js` (зараз `zrinyi-v11`).
 
 ## Режими
 - Швидке тренування: 10 задач.
@@ -71,3 +71,14 @@
 
 ## Локальний запуск
 `python3 -m http.server` у цій папці, потім відкрити http://localhost:8000
+
+## Аналітика (Google Analytics 4)
+`js/analytics.js`, property "Zrinyi (zrinyi.bodco.pm)", `G-DDQG89BBRH`. Працює лише на zrinyi.bodco.pm (на localhost вимкнена, `?ga` вмикає для тестів, `?debug` додає DebugView). Банера згоди немає.
+- Пристрій: випадковий id у localStorage `zrinyi.did`, іде як `user_id` і user property `device_id`. Одна дитина = пристрій + клас, параметр `learner_id` = `<device_id>.g<клас>` (брати й сестри на одному пристрої мають різні класи).
+- Ніколи не надсилаються імена (nickname), тексти задач і будь-що, що дитина пише. Лише id задач, літери A-E, лічильники й час.
+- page_view на кожен екран (`/g/5/quiz`, ids сесій прибрано), enhanced measurement без history-подій.
+- Задачі: `problem_answer` (problem_id, topic, difficulty, source_type, mode, position, outcome correct/wrong/skipped, hints_used, time_ms, first_pick_ms, option_changes, tab_leaves, away_ms, speed), у пробному конкурсі надсилаються всі разом при завершенні з повним часом на кожну задачу.
+- Підказки `hint_open` (auto 0/1, hint_level), розбір `review_start`, `review_answer` (attempt, outcome), `review_giveup`, `solution_open`, `solution_step`, `review_finish`.
+- Сесії `quiz_start`, `quiz_finish`, `quiz_quit`, `quiz_resume`, `quiz_discard`, `quiz_pause`, `gate_blocked`; пробний `mock_jump`, `mock_back`, `mock_skip`, `mock_grid`, `mock_finish_ask`, `answer_clear`.
+- Вихід з вкладки посеред задачі: `tab_hidden`, `tab_return` (away_ms).
+- Нагороди й налаштування: `shop_buy`, `shop_cancel`, `outfit_change`, `goal_set`, `level_set`, `autohints_toggle`, `badge_earned`, `level_up`, `chest_open`, `lang_change`, `nickname_set` (лише has_name), `progress_export`, `progress_import`, `grade_reset`, `data_error`, `js_error`.

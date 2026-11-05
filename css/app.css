@@ -803,3 +803,55 @@ button.bones-pill:active { transform: scale(.96); }
   .levelup .owl { animation: none !important; }
   .ring-fg, .xpbar i { transition: none !important; }
 }
+
+/* ---------- v10: review gate, fix reward, scene items (kennel, toy, bowl), shop groups, rank locks ---------- */
+/* Archie with his scene: same Archie size as without it, the picture just gets wider/taller (--sk, --ar set by mascot.js) */
+.owl.archie-scene { width: auto !important; aspect-ratio: var(--ar); max-width: 100%; }
+.archie-scene.sc-home, .archie-scene.sc-res, .archie-scene.sc-modal { height: calc(104px * var(--sk)); }
+.archie-scene.sc-shop { height: calc(133px * var(--sk)); }
+.archie-scene.owl-item { height: calc(77px * var(--sk)); }
+body.band-teen .archie-scene.sc-home, body.band-teen .archie-scene.sc-res { height: calc(79px * var(--sk)); }
+body.band-teen .archie-scene.sc-shop { height: calc(100px * var(--sk)); }
+.greet.has-house { flex-wrap: wrap; }
+@media (max-width: 479px) {
+  .greet.has-house { justify-content: center; gap: 6px 14px; }
+  .greet.has-house .greet-txt { flex: 1 1 100%; }
+  .shop-hero.has-house { flex-wrap: wrap; justify-content: center; }
+  .shop-hero.has-house .shop-hero-t { flex: 1 1 100%; }
+}
+@media (max-width: 359px) {
+  .archie-scene.sc-home, .archie-scene.sc-res, .archie-scene.sc-modal { height: calc(88px * var(--sk)); }
+  .archie-scene.sc-shop { height: calc(108px * var(--sk)); }
+  .archie-scene.owl-item { height: calc(66px * var(--sk)); }
+}
+@media (min-width: 768px) { .archie-scene.sc-shop { height: calc(156px * var(--sk)); } }
+
+/* review gate card on the grade home */
+.gate { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 8px 12px; margin: 2px 0 14px; padding: 14px; border-radius: var(--radius); background: linear-gradient(135deg, #FFF3C4, #FFE8D6); border: 2px solid #FDBA74; box-shadow: var(--shadow); }
+.gate .owl { width: 64px; height: 66px; }
+.gate h2 { margin: 0; font-size: 19px; font-weight: 900; line-height: 1.2; color: #7A3E00; font-family: var(--font-head); }
+.gate p { margin: 4px 0 0; font-size: 14px; font-weight: 700; color: #5B3A22; line-height: 1.3; }
+.gate .btn { grid-column: 1 / -1; width: 100%; }
+@media (max-width: 359px) { .gate { padding: 12px; } .gate h2 { font-size: 17px; } .gate .owl { width: 52px; height: 54px; } }
+/* locked practice modes */
+.mode.locked { opacity: .62; filter: saturate(.55); box-shadow: none; }
+.mode.locked:active { transform: none; }
+.mode .lock { flex: none; width: 34px; height: 34px; display: grid; place-items: center; font-size: 18px; border-radius: 50%; background: #fff; box-shadow: 0 0 0 2px var(--line); }
+.mode.m-quick.locked .lock { box-shadow: none; }
+
+/* fix reward in the review */
+.fixpay { display: inline-flex; align-items: center; gap: 3px; margin-left: 8px; padding: 2px 9px 2px 10px; border-radius: 999px; background: #FFF1D6; border: 1.5px solid #F3D9A4; color: #8A5A2B; font-size: 14px; font-weight: 900; vertical-align: 2px; white-space: nowrap; font-family: var(--font-body, inherit); }
+.fixpay .bone { width: 18px; height: 18px; vertical-align: -4px; }
+.fixpay.got { margin: 6px 0 0; font-size: 16px; }
+
+/* shop groups + locks */
+.shop-group { margin-top: 18px; }
+.sg-h { display: flex; align-items: center; gap: 8px; margin: 0 2px 2px; font-size: 21px; font-weight: 900; font-family: var(--font-head); padding-bottom: 6px; border-bottom: 3px dotted color-mix(in srgb, var(--accent) 55%, var(--line)); }
+.shelf h3 { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.shelf h3 small { font-size: 13px; font-weight: 800; color: var(--ink2); background: var(--surface); border: 1.5px solid var(--line); border-radius: 999px; padding: 1px 9px; }
+.item.locked .item-prev { filter: grayscale(.45); opacity: .75; }
+.item.locked b { color: var(--ink2); }
+.item.locked .btn.buy { font-size: 14px; }
+.item.scene .item-prev { min-height: 85px; align-content: end; overflow: hidden; }
+.item-tag.prem { background: linear-gradient(90deg, #E0A400, #F59E0B); color: #3F2A00; }
+.item.premium:not(.owned) { border-color: #F3D9A4; }

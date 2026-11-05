@@ -92,8 +92,12 @@ export const STR = {
     homeSayFull: 'Van egy félbehagyott teljes edzésed. Folytassuk, ahol abbahagytad?',
     shopTitle: 'Archie szekrénye',
     shopSay: 'Mit vegyek fel ma? Csontot gyakorlással gyűjthetsz, és sosem veszíted el.',
-    slots: { harness: 'Hám', hat: 'Sapka', neck: 'Nyakba', eyes: 'Szemüveg', extra: 'Hasznos' },
-    items: { navy: 'Kék hám', red: 'Piros hám', green: 'Zöld hám', pink: 'Rózsaszín hám', gold: 'Arany hám', bowtie: 'Csokornyakkendő', scarf: 'Csíkos sál', glasses: 'Szemüveg', cap: 'Baseballsapka', crown: 'Korona' },
+    slots: { harness: 'Hám', body: 'Pulóver', hat: 'Sapka', neck: 'Nyakba', eyes: 'Szemüveg', toy: 'Csont játék', bowl: 'Tál', house: 'Kutyaház', extra: 'Hasznos' },
+    items: { navy: 'Kék hám', red: 'Piros hám', green: 'Zöld hám', pink: 'Rózsaszín hám', gold: 'Arany hám', bowtie: 'Csokornyakkendő', scarf: 'Csíkos sál', glasses: 'Szemüveg', cap: 'Baseballsapka', crown: 'Korona',
+      sw_red: 'Csíkos piros pulóver', sw_blue: 'Kék kötött pulóver', sw_green: 'Zöld csillagos pulóver', sw_rainbow: 'Szivárványos pulóver',
+      toy_small: 'Kis csont játék', toy_big: 'Nagy rágócsont', toy_gold: 'Arany csont',
+      bowl_blue: 'Kék tál', bowl_red: 'Piros tál', bowl_green: 'Zöld tál', bowl_pink: 'Rózsaszín tál', bowl_gold: 'Arany tál',
+      house_wood: 'Fa kutyaház', house_red: 'Piros tetős kutyaház', house_blue: 'Kék kutyaház virágokkal', house_castle: 'Kutyakastély' },
     wear: 'Felveszem',
     takeOff: 'Leveszem',
     wearing: 'Rajta van',
@@ -304,6 +308,18 @@ export const STR = {
     newBadge: 'Új jelvény!',
     // parents
     parentsTitle: 'Szülőknek',
+    // v10: review gate, fix reward, new shop items, rank locks
+    gateTitle: (n) => `Előbb javítsuk ki a hibákat! (még ${n})`,
+    gateSub: 'Utána jöhet az új kör. Minden javításért csont jár!',
+    gateBtn: 'Javítsuk ki a hibákat',
+    gateOpen: 'Minden hiba kész! Jöhet az új kör.',
+    homeSayGate: 'Nézzük meg együtt a hibákat, utána jöhet a következő kör!',
+    lockedMode: 'Zárva, előbb a javítás',
+    fixPay: 'Javításért',
+    slotGroups: { wear: 'Ruhák', home: 'Archie otthona' },
+    rankLock: (n) => `Szint ${n}-${[3, 6, 8].includes(n) ? 'tól' : 'től'}`,
+    rankLockAria: (n) => `Zárva: a ${n}. szinttől vehető meg`,
+    premium: 'Különleges',
     langName: 'Magyar'
   },
   uk: {
@@ -388,8 +404,12 @@ export const STR = {
     homeSayFull: 'У тебе є незавершене повне тренування. Продовжимо з того місця?',
     shopTitle: 'Шафа Арчі',
     shopSay: 'Що мені вдягнути сьогодні? Кісточки збираєш, коли тренуєшся, і ніколи їх не втрачаєш.',
-    slots: { harness: 'Шлейка', hat: 'Шапка', neck: 'На шию', eyes: 'Окуляри', extra: 'Корисне' },
-    items: { navy: 'Синя шлейка', red: 'Червона шлейка', green: 'Зелена шлейка', pink: 'Рожева шлейка', gold: 'Золота шлейка', bowtie: 'Метелик', scarf: 'Смугастий шарф', glasses: 'Окуляри', cap: 'Кепка', crown: 'Корона' },
+    slots: { harness: 'Шлейка', body: 'Светрик', hat: 'Шапка', neck: 'На шию', eyes: 'Окуляри', toy: 'Кісточка-іграшка', bowl: 'Миска', house: 'Будка', extra: 'Корисне' },
+    items: { navy: 'Синя шлейка', red: 'Червона шлейка', green: 'Зелена шлейка', pink: 'Рожева шлейка', gold: 'Золота шлейка', bowtie: 'Метелик', scarf: 'Смугастий шарф', glasses: 'Окуляри', cap: 'Кепка', crown: 'Корона',
+      sw_red: 'Червоний смугастий светрик', sw_blue: 'Синій вʼязаний светрик', sw_green: 'Зелений светрик із зірками', sw_rainbow: 'Райдужний светрик',
+      toy_small: 'Маленька кісточка-іграшка', toy_big: 'Велика кісточка для гризіння', toy_gold: 'Золота кісточка',
+      bowl_blue: 'Синя миска', bowl_red: 'Червона миска', bowl_green: 'Зелена миска', bowl_pink: 'Рожева миска', bowl_gold: 'Золота миска',
+      house_wood: 'Деревʼяна будка', house_red: 'Будка з червоним дахом', house_blue: 'Синя будка з квітами', house_castle: 'Будка-замок' },
     wear: 'Вдягнути',
     takeOff: 'Зняти',
     wearing: 'Вдягнено',
@@ -594,6 +614,18 @@ export const STR = {
     },
     newBadge: 'Новий значок!',
     parentsTitle: 'Батькам',
+    // v10: review gate, fix reward, new shop items, rank locks
+    gateTitle: (n) => `Спершу виправимо помилки! (ще ${n})`,
+    gateSub: 'Потім можна нове коло. За кожне виправлення є кісточки!',
+    gateBtn: 'Виправимо помилки',
+    gateOpen: 'Усі помилки розібрано! Можна нове коло.',
+    homeSayGate: 'Розберімо помилки разом, а потім буде наступне коло!',
+    lockedMode: 'Закрито, спершу виправлення',
+    fixPay: 'За виправлення',
+    slotGroups: { wear: 'Одяг', home: 'Дім Арчі' },
+    rankLock: (n) => `З рівня ${n}`,
+    rankLockAria: (n) => `Закрито: можна купити з рівня ${n}`,
+    premium: 'Особлива річ',
     langName: 'Українська'
   }
 };
@@ -640,11 +672,12 @@ export const PARENTS = {
     <li><b>Teljes edzés:</b> egy teljes feladatlapnyi feladat (25, 7-8. osztályban 30) könnyűtől a nehézig, mint a versenyen, de időkorlát nélkül és tippekkel. Hosszú, ezért bármikor abbahagyható és később folytatható. A témánkénti tudás a Haladásom oldalon látszik.</li>
     <li><b>Próbaverseny:</b> 25 (7-8. osztályban 30) feladat könnyűtől a nehézig, valódi időkorláttal és pontozással. Megállítható.</li>
     <li><b>Hibák javítása:</b> a legfontosabb rész. Minden hibánál előbb elmagyarázzuk, miért választhatta a gyerek azt a választ, adunk egy rávezető kérdést, és még egyszer megpróbálhatja. Csak ezután jön a lépésenkénti megoldás.</li>
+    <li><b>Előbb a javítás:</b> ha egy körben (gyors gyakorlás, teljes edzés, kihívás vagy próbaverseny) rossz vagy kihagyott feladat volt, új kört csak azután lehet kezdeni, hogy a gyerek végigment a kör hibáinak javításán: minden ilyen feladatot vagy kijavított, vagy végignézte a megoldását. Így nem éri meg a nehéz feladatokat kihagyni és csak a könnyűeken csontot gyűjteni. Egy félbehagyott kör folytatható, a "Hibák javítása" pedig mindig elérhető.</li>
     <li><b>Segítség (tippek):</b> gyakorláskor és javításkor minden feladatnál kérhet a gyerek tippet. A tippek szintenként nyílnak: az első csak egy apró terelés, az utolsó már részletes, de a választ soha nem árulja el. A próbaversenyen nincs tipp. Ha helyesen válaszolt tipp után, az eredmény helyes, de 💡 jelzi, hogy segítséggel ment. A javításnál a "magadtól" csak az, amit tippek nélkül sikerült kijavítani.</li>
     <li><b>Automatikus tippek és szint:</b> ha a gyerek egy ideig nem válaszol, a következő tipp magától kinyílik; a várakozás a feladat nehézségétől és az osztálytól függ, és tippről tippre nő (a próbaversenyen soha). Ez, valamint a gyakorlás szintje ("Mint a versenyen" vagy "Könnyebb") az osztály kezdőoldalán állítható.</li>
     <li><b>Archie:</b> a kis Jack Russell terrier végig a gyerek mellett van, bátorít, és gondolkodik vele. Gyakorláskor nem árulja el, jó-e a válasz, az eredmény a kör végén jön.</li>
     <li><b>Kihívások:</b> ha a kör könnyűnek tűnik, a nehezebb versenyfeladatokból is lehet gyakorolni (időkorlát nélkül). Ezek nem kerülnek a többi körbe.</li>
-    <li><b>Csontok, napi cél, sorozat, szekrény:</b> Archie csontjai pontosan úgy számolódnak, mint a verseny pontjai: helyes válasz +4, rossz válasz -1, kihagyott 0; a próbaversenyen ráadásul mindenki annyi csonttal indul, ahány feladat van, így a csontok száma megegyezik a Zrínyi-pontszámmal. A javításkor magától kijavított hibáért kis jutalom jár. A napi cél (30, 50 vagy 80 csont) a Haladásom oldalon állítható. A sorozat azt számolja, hány nap egymás után gyakorolt a gyerek; ha egy nap kimarad, "Archie takarója" megvédi (7 nap után ajándékba jár, vagy csontért vehető). Ha egy héten 5 napon gyakorol, kinyílik a heti láda. A csontokból Archie-nak ruhát vehet a szekrényben, ez csak játék, semmilyen előnyt nem ad. Nincs időzített értesítés, nincs sürgetés: minden csak az oldalon belül látszik.</li>
+    <li><b>Csontok, napi cél, sorozat, szekrény:</b> Archie csontjai pontosan úgy számolódnak, mint a verseny pontjai: helyes válasz +4, rossz válasz -1, kihagyott 0; a próbaversenyen ráadásul mindenki annyi csonttal indul, ahány feladat van, így a csontok száma megegyezik a Zrínyi-pontszámmal. A javítás jobban fizet, mint egy helyes válasz: magától kijavított (vagy korábban kihagyott, most megoldott) feladatért 6 csont, tippekkel 3. A napi cél (30, 50 vagy 80 csont) a Haladásom oldalon állítható. A sorozat azt számolja, hány nap egymás után gyakorolt a gyerek; ha egy nap kimarad, "Archie takarója" megvédi (7 nap után ajándékba jár, vagy csontért vehető). Ha egy héten 5 napon gyakorol, kinyílik a heti láda. A csontokból Archie-nak ruhát, játékot, tálat és kutyaházat vehet a szekrényben; egyes dolgok csak magasabb szinttől nyílnak meg, így mindig van új cél. Ez csak játék, semmilyen előnyt nem ad. Nincs időzített értesítés, nincs sürgetés: minden csak az oldalon belül látszik.</li>
     <li>Tipp: 10-15 perc naponta többet ér, mint egy hosszú hétvégi alkalom. Üljön le mellé, és kérje meg, hogy hangosan gondolkodjon!</li>
   </ul>
   <h2>Adatok</h2>
@@ -674,11 +707,12 @@ export const PARENTS = {
     <li><b>Повне тренування:</b> задачі на цілий бланк (25, у 7-8 класі 30) від легких до складних, як на конкурсі, але без таймера і з підказками. Воно довге, тому його можна перервати й продовжити пізніше. Знання за темами видно на сторінці "Мій прогрес".</li>
     <li><b>Пробний конкурс:</b> 25 (у 7-8 класі 30) задач від легких до складних, зі справжнім часом і балами. Можна поставити на паузу.</li>
     <li><b>Робота над помилками:</b> найважливіша частина. Для кожної помилки спершу пояснюємо, чому дитина могла обрати цю відповідь, даємо навідне питання і ще одну спробу. Лише потім показуємо розвʼязок крок за кроком.</li>
+    <li><b>Спершу виправлення:</b> якщо в колі (швидке чи повне тренування, виклик або пробний конкурс) були неправильні чи пропущені задачі, нове коло можна почати лише після того, як дитина пройде роботу над помилками цього кола: кожну таку задачу або виправить, або перегляне її розвʼязок до кінця. Так не вигідно пропускати складні задачі й збирати кісточки лише на легких. Незавершене коло можна продовжити, а "Робота над помилками" доступна завжди.</li>
     <li><b>Підказки:</b> під час тренування і роботи над помилками до кожної задачі можна попросити підказку. Підказки відкриваються рівнями: перша лише легенько спрямовує, остання вже детальна, але відповідь не розкриває ніколи. У пробному конкурсі підказок немає. Якщо дитина відповіла правильно після підказки, результат зараховується, а значок 💡 показує, що вона була з допомогою. У роботі над помилками "сам" означає лише те, що виправлено без підказок.</li>
     <li><b>Автоматичні підказки й рівень:</b> якщо дитина якийсь час не відповідає, наступна підказка відкривається сама; час очікування залежить від складності задачі й класу та зростає від підказки до підказки (у пробному конкурсі ніколи). Це, а також рівень тренування ("Як на конкурсі" чи "Легше"), налаштовується на головній сторінці класу.</li>
     <li><b>Арчі:</b> маленький джек-рассел-терʼєр увесь час поруч із дитиною, підбадьорює і думає разом із нею. Під час тренування він не підказує, чи правильна відповідь, результат буде наприкінці кола.</li>
     <li><b>Виклики:</b> якщо коло здається легким, можна потренуватися на складніших конкурсних задачах (без таймера). Вони не потрапляють в інші кола.</li>
-    <li><b>Кісточки, мета дня, серія, шафа:</b> Кісточки рахуються точно як бали на конкурсі: правильна відповідь +4, неправильна -1, пропущена 0; у пробному конкурсі кожен ще й стартує з такої кількості кісточок, скільки задач, тож кісточки дорівнюють балам Zrínyi. За помилку, самостійно виправлену під час розбору, є невелика нагорода. Мету дня (30, 50 або 80 кісточок) можна змінити на сторінці "Мій прогрес". Серія рахує, скільки днів поспіль дитина тренується; якщо день пропущено, "ковдрочка Арчі" зберігає серію (дається в подарунок за 7 днів поспіль або купується за кісточки). Якщо за тиждень є 5 днів тренувань, відкривається скриня тижня. За кісточки в шафі можна купити Арчі одяг, це лише гра і жодних переваг не дає. Немає нагадувань за таймером і поспіху: усе видно лише всередині сайту.</li>
+    <li><b>Кісточки, мета дня, серія, шафа:</b> Кісточки рахуються точно як бали на конкурсі: правильна відповідь +4, неправильна -1, пропущена 0; у пробному конкурсі кожен ще й стартує з такої кількості кісточок, скільки задач, тож кісточки дорівнюють балам Zrínyi. Виправлення оплачується краще, ніж правильна відповідь: за задачу, виправлену самостійно (або раніше пропущену й тепер розвʼязану), 6 кісточок, з підказками 3. Мету дня (30, 50 або 80 кісточок) можна змінити на сторінці "Мій прогрес". Серія рахує, скільки днів поспіль дитина тренується; якщо день пропущено, "ковдрочка Арчі" зберігає серію (дається в подарунок за 7 днів поспіль або купується за кісточки). Якщо за тиждень є 5 днів тренувань, відкривається скриня тижня. За кісточки в шафі можна купити Арчі одяг, іграшку, миску й будку; деякі речі відкриваються лише з вищого рівня, тож завжди є нова мета. Це лише гра і жодних переваг не дає. Немає нагадувань за таймером і поспіху: усе видно лише всередині сайту.</li>
     <li>Порада: 10-15 хвилин щодня дають більше, ніж одне довге заняття у вихідні. Сядьте поруч і попросіть дитину міркувати вголос!</li>
   </ul>
   <h2>Дані</h2>

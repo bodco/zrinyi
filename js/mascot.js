@@ -3,8 +3,10 @@
 // The exported name `owl` is kept for backwards compatibility with app.js.
 const BROWN = '#B8692E', BROWN_D = '#8A4A1C', INK = '#2A1E17', WHITE = '#FFFDF8', LINE = '#5B3A22';
 
-// Outfit from the wardrobe: {harness: color, hat: 'cap'|'crown', neck: 'bowtie'|'scarf', eyes: 'glasses'}.
-// app.js calls setOutfit() when the grade changes, so every Archie on screen wears the same things.
+// Outfit from the wardrobe: {harness: color, body: sweater id, hat: 'cap'|'crown', neck: 'bowtie'|'scarf', eyes: 'glasses',
+// toy, bowl, house: scene item ids}. app.js calls setOutfit() when the grade changes, so every Archie on screen wears
+// the same things. Wearables show on every Archie (archie()); scene items (toy, bowl, house) only in archieScene(),
+// which the big hero spots use (grade home, results, shop). Both keep the signature (mood, cls, outfit = current).
 let OUTFIT = null;
 export function setOutfit(o) { OUTFIT = o || null; }
 export function getOutfit() { return OUTFIT; }
@@ -30,8 +32,112 @@ const ACC = {
     <circle cx="39" cy="3" r="2" fill="#FFE58A" stroke="#9A6A12" stroke-width="1"/><circle cx="60" cy="-1" r="2" fill="#FFE58A" stroke="#9A6A12" stroke-width="1"/><circle cx="81" cy="3" r="2" fill="#FFE58A" stroke="#9A6A12" stroke-width="1"/></g>`
 };
 
+
+// Sweaters (slot 'body'): drawn on the torso, under the harness. Each: base color, rib color, pattern (inside the torso clip).
+const RAINBOW = ['#EF4444', '#F97316', '#FACC15', '#22C55E', '#3B82F6', '#8B5CF6'];
+const starPath = (cx, cy, r) => {
+  let d = '';
+  for (let i = 0; i < 10; i++) {
+    const a = -Math.PI / 2 + (i * Math.PI) / 5, rr = i % 2 ? r * 0.45 : r;
+    d += `${i ? 'L' : 'M'}${(cx + rr * Math.cos(a)).toFixed(2)} ${(cy + rr * Math.sin(a)).toFixed(2)} `;
+  }
+  return d + 'Z';
+};
+const SWEATER = {
+  sw_red: { c: '#E5484D', rib: '#C62F35', pat: `<path d="M0 79 Q60 87 120 79 M0 88 Q60 96 120 88" stroke="#FFFDF8" stroke-width="3.8" fill="none"/>` },
+  sw_blue: { c: '#3B82F6', rib: '#2563EB', pat: [74, 81, 88].map((y) => Array.from({ length: 9 }, (_, i) => `M${33 + i * 6} ${y + (i % 2) * 0} l3 3.2 l3 -3.2`).join(' ')).map((d) => `<path d="${d}" stroke="#BFDBFE" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`).join('') },
+  sw_green: { c: '#22A55B', rib: '#15803D', pat: `<path d="${starPath(45.5, 93, 4.6)}" fill="#FFC83D" stroke="${LINE}" stroke-width="1" stroke-linejoin="round"/><path d="${starPath(75, 93, 4.6)}" fill="#FFC83D" stroke="${LINE}" stroke-width="1" stroke-linejoin="round"/>` },
+  sw_rainbow: { c: RAINBOW[0], rib: '#7C3AED', pat: RAINBOW.map((col, i) => `<path d="M0 ${68 + i * 5.5} Q60 ${75 + i * 5.5} 120 ${68 + i * 5.5}" stroke="${col}" stroke-width="5.8" fill="none"/>`).join('') }
+};
+function sweaterSVG(kind, id) {
+  const w = SWEATER[kind];
+  if (!w) return '';
+  const ribs = Array.from({ length: 17 }, (_, i) => `M${36 + i * 3} 94 v9`).join(' ');
+  return `<g class="acc acc-sweater acc-${kind}"><g clip-path="url(#${id}b)"><g clip-path="url(#${id}t)">
+      <rect x="20" y="60" width="80" height="50" fill="${w.c}"/>${w.pat}
+      <path d="M0 95 Q60 101 120 95 L120 110 L0 110 Z" fill="${w.rib}"/>
+      <path d="${ribs}" stroke="#000" stroke-opacity=".16" stroke-width="1.1"/>
+    </g><path d="M0 100 Q60 106 120 100" stroke="${LINE}" stroke-width="1.8" fill="none"/></g>
+    <path d="BODYPATH" fill="none" stroke="${LINE}" stroke-width="1.8" stroke-linejoin="round" clip-path="url(#${id}t)"/></g>`;
+}
+
+// Scene items, in Archie's coordinates (he sits in 0..120 x 0..124, the ground is at y = 122).
+const boneToy = (cx, cy, len, r, rot, fill, line, extra = '') => `<g transform="rotate(${rot} ${cx} ${cy})">
+    <g fill="${fill}" stroke="${line}" stroke-width="1.8" stroke-linejoin="round">
+      <circle cx="${cx - len / 2}" cy="${cy - r * 0.78}" r="${r}"/><circle cx="${cx - len / 2}" cy="${cy + r * 0.78}" r="${r}"/>
+      <circle cx="${cx + len / 2}" cy="${cy - r * 0.78}" r="${r}"/><circle cx="${cx + len / 2}" cy="${cy + r * 0.78}" r="${r}"/></g>
+    <rect x="${cx - len / 2}" y="${cy - r * 0.85}" width="${len}" height="${r * 1.7}" fill="${fill}"/>
+    <path d="M${cx - len / 2 + r * 0.3} ${cy - r * 0.85} H${cx + len / 2 - r * 0.3} M${cx - len / 2 + r * 0.3} ${cy + r * 0.85} H${cx + len / 2 - r * 0.3}" stroke="${line}" stroke-width="1.8" stroke-linecap="round"/>
+    ${extra}</g>`;
+const sparkle = (x, y, r, c = '#FFF7C2') => `<path d="M${x} ${y - r} Q${x + r * 0.18} ${y - r * 0.18} ${x + r} ${y} Q${x + r * 0.18} ${y + r * 0.18} ${x} ${y + r} Q${x - r * 0.18} ${y + r * 0.18} ${x - r} ${y} Q${x - r * 0.18} ${y - r * 0.18} ${x} ${y - r} Z" fill="${c}" stroke="#C48A00" stroke-width=".9" stroke-linejoin="round"/>`;
+const TOYS = {
+  toy_small: () => boneToy(5, 118.5, 18, 3.6, -10, WHITE, LINE, `<path d="M0 116.2 H8" stroke="#fff" stroke-width="1.3" stroke-linecap="round" opacity=".9" transform="rotate(-10 5 118.5)"/>`),
+  toy_big: () => boneToy(1, 116, 28, 5.4, -12, '#F3D9A4', LINE, `<path d="M-6 114.5 q2 2 4 0 M3 117.5 q2 2 4 0" stroke="#C99A55" stroke-width="1.3" fill="none" stroke-linecap="round"/><path d="M-9 113 H5" stroke="#FFF3D6" stroke-width="1.6" stroke-linecap="round"/>`),
+  toy_gold: () => boneToy(3, 117.5, 22, 4.4, -10, '#FFC83D', '#8A5A12', `<path d="M-5 115.2 H9" stroke="#FFF1B0" stroke-width="1.8" stroke-linecap="round"/>`) + sparkle(-8, 104, 4) + sparkle(17, 106, 3)
+};
+const BOWLS = { bowl_blue: ['#3B82F6', '#93C5FD'], bowl_red: ['#E5484D', '#FCA5A5'], bowl_green: ['#22A55B', '#86EFAC'], bowl_pink: ['#EC4899', '#F9A8D4'], bowl_gold: ['#F5B800', '#FFE58A'] };
+function bowlSVG(kind) {
+  const b = BOWLS[kind];
+  if (!b) return '';
+  const [c, l] = b;
+  const kib = [[114, 108.6], [119.5, 107.4], [125, 108.2], [130.5, 107.3], [135, 108.8], [117, 110], [128, 110.2]];
+  const paw = (x, y) => `<g fill="${l}"><ellipse cx="${x}" cy="${y + 1.4}" rx="3" ry="2.4"/><circle cx="${x - 3.3}" cy="${y - 2}" r="1.3"/><circle cx="${x}" cy="${y - 3.1}" r="1.3"/><circle cx="${x + 3.3}" cy="${y - 2}" r="1.3"/></g>`;
+  return `<g class="scn scn-bowl scn-${kind}">
+    <path d="M103 111 L107.5 122 Q124 126.500 140.5 122 L145 111 Z" fill="${c}" stroke="${LINE}" stroke-width="1.8" stroke-linejoin="round"/>
+    ${paw(124, 117.6)}
+    <ellipse cx="124" cy="110.6" rx="21.5" ry="4.6" fill="${l}" stroke="${LINE}" stroke-width="1.8"/>
+    <ellipse cx="124" cy="110.4" rx="17" ry="2.9" fill="#7A4316"/>
+    ${kib.map(([x, y]) => `<circle cx="${x}" cy="${y}" r="2.3" fill="#B8692E" stroke="#6B3A14" stroke-width=".8"/>`).join('')}
+    ${kind === 'bowl_gold' ? sparkle(146, 102, 4) + sparkle(102, 104, 2.8) : ''}</g>`;
+}
+// Kennels: front view, door in the middle, Archie sits in front of its right side.
+function houseSVG(kind) {
+  if (kind === 'house_castle') {
+    const merlons = (x0, x1, y, w = 8) => { let d = `M${x0} ${y + 7}`; for (let x = x0; x < x1 - 0.1; x += w * 2) d += ` V${y} H${Math.min(x + w, x1)} V${y + 7} H${Math.min(x + w * 2, x1)}`; return d + ` V${y + 7}`; };
+    const stones = [52, 64, 76, 88, 100, 112].map((y, i) => `M-54 ${y} H30 ` + Array.from({ length: 6 }, (_, k) => `M${-48 + k * 14 + (i % 2) * 7} ${y} v-12`).join(' ')).join(' ');
+    return `<g class="scn scn-house scn-house_castle">
+      <path d="${merlons(-56, 32, 34)} V122 H-56 Z" fill="#CBD2DC" stroke="${LINE}" stroke-width="1.8" stroke-linejoin="round"/>
+      <path d="${stones}" stroke="#9AA4B5" stroke-width="1.1" fill="none"/>
+      <path d="M-70 122 V30 H-44 V122 Z" fill="#B8C0CD" stroke="${LINE}" stroke-width="1.8" stroke-linejoin="round"/>
+      <path d="M-73 31 L-57 -4 L-41 31 Z" fill="#8B5CF6" stroke="${LINE}" stroke-width="1.8" stroke-linejoin="round"/>
+      <path d="M-62 30 L-57 -1" stroke="#C4B5FD" stroke-width="2" stroke-linecap="round"/>
+      <path d="M-57 -4 V-24" stroke="${LINE}" stroke-width="1.8" stroke-linecap="round"/>
+      <path d="M-56 -24 L-42 -20 L-56 -15 Z" fill="#E5484D" stroke="${LINE}" stroke-width="1.4" stroke-linejoin="round"/>
+      <rect x="-61" y="48" width="8" height="14" rx="4" fill="#3B2414" stroke="${LINE}" stroke-width="1.4"/>
+      <path d="M-34 122 V90 A20 20 0 0 1 6 90 V122 Z" fill="#3B2414" stroke="${LINE}" stroke-width="1.8" stroke-linejoin="round"/>
+      <path d="M-34 90 A20 20 0 0 1 6 90" stroke="#8A93A5" stroke-width="3.6" fill="none"/>
+      <path d="M-24 122 V96 M-14 122 V92 M-4 122 V96" stroke="#5B3A22" stroke-width="1.2" opacity=".5"/>
+      <path d="M-29 46 h10 v8 h-10 Z M-5 46 h10 v8 h-10 Z" fill="#FFC83D" stroke="${LINE}" stroke-width="1.3" stroke-linejoin="round"/>
+</g>`;
+  }
+  const C = {
+    house_wood: { wall: '#D9A066', roof: '#8A5A2B', roofL: '#B07A40', line: '#A8743C' },
+    house_red: { wall: '#FFF1DC', roof: '#E5484D', roofL: '#FF8A8E', line: '#E7CFA8' },
+    house_blue: { wall: '#8EC5FF', roof: '#2B4C9B', roofL: '#5B7BD5', line: '#6AA8EE' }
+  }[kind];
+  if (!C) return '';
+  const planks = kind === 'house_blue' ? '' : `<path d="M-56 70 H32 M-56 82 H32 M-56 94 H32 M-56 106 H32" stroke="${C.line}" stroke-width="1.3"/>`;
+  const plate = kind === 'house_red' ? `<g class="plate"><rect x="-36" y="50" width="48" height="14" rx="3" fill="#F3D9A4" stroke="${LINE}" stroke-width="1.5"/>
+      <text x="-12" y="61" text-anchor="middle" font-family="Nunito, Manrope, sans-serif" font-weight="900" font-size="10" letter-spacing=".6" fill="${LINE}">ARCHIE</text></g>` : '';
+  const win = kind === 'house_blue' ? `<circle cx="-12" cy="40" r="7.5" fill="#E8F6FF" stroke="${LINE}" stroke-width="1.6"/><path d="M-12 32.5 V47.5 M-19.5 40 H-4.5" stroke="${LINE}" stroke-width="1.4"/><path d="M-16 37 q2 -3 5 -3" stroke="#fff" stroke-width="1.4" fill="none" stroke-linecap="round"/>` : '';
+  const flower = (x, y, pc) => `<path d="M${x} 122 V${y + 3}" stroke="#16A34A" stroke-width="1.6" stroke-linecap="round"/><path d="M${x} ${y + 10} q-4 -1 -5 -4 q4 0 5 4" fill="#22C55E" stroke="#15803D" stroke-width=".8"/>
+      <g fill="${pc}" stroke="${LINE}" stroke-width=".9">${[0, 72, 144, 216, 288].map((a) => `<circle cx="${(x + 2.9 * Math.cos((a * Math.PI) / 180)).toFixed(2)}" cy="${(y + 2.9 * Math.sin((a * Math.PI) / 180)).toFixed(2)}" r="2.3"/>`).join('')}</g><circle cx="${x}" cy="${y}" r="1.7" fill="#FFC83D"/>`;
+  const flowers = kind === 'house_blue' ? flower(-61, 108, '#F472B6') + flower(-52, 112, '#FDE047') + flower(-44, 106, '#F9A8D4') + flower(12, 112, '#FDE047') : '';
+  return `<g class="scn scn-house scn-${kind}">
+    <path d="M-56 122 V58 L-12 14 L32 58 V122 Z" fill="${C.wall}" stroke="${LINE}" stroke-width="1.8" stroke-linejoin="round"/>
+    ${planks}
+    <path d="M-30 122 V90 A18 18 0 0 1 6 90 V122 Z" fill="#3B2414" stroke="${LINE}" stroke-width="1.8" stroke-linejoin="round"/>
+    <path d="M-26 122 V91 A14 14 0 0 1 -12 76" stroke="#5B3A22" stroke-width="2" fill="none" opacity=".7"/>
+    ${plate}${win}
+    <path d="M-66 56 L-12 2 L42 56 L42 69 L-12 15 L-66 69 Z" fill="${C.roof}" stroke="${LINE}" stroke-width="1.8" stroke-linejoin="round"/>
+    <path d="M-60 57 L-12 9 L36 57" stroke="${C.roofL}" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    ${flowers}</g>`;
+}
+const hasScene = (o) => !!(o && (o.toy || o.bowl || o.house));
+
 let _aid = 0;
-export function archie(mood = 'happy', cls = '', outfit = OUTFIT) {
+// Archie's drawing in his own 0..120 x 0..124 box: {defs, g}
+function archieParts(mood, outfit) {
   const id = 'ar-hc' + (++_aid);
   const S = `stroke="${LINE}" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"`;
   const o = outfit || {};
@@ -94,7 +200,17 @@ export function archie(mood = 'happy', cls = '', outfit = OUTFIT) {
     </g>
     <path d="${BODY}" fill="none" ${S}/>
     ${leg(48)}
-    ${pawUp ? '' : leg(63)}`;
+    ${pawUp ? '' : leg(63)}
+    ${o.body && SWEATER[o.body] ? sweaterSVG(o.body, id).replace('BODYPATH', BODY) : ''}`;
+  // a raised paw comes out of a sweater sleeve: the first part of the foreleg in sweater color, with a ribbed cuff
+  const sh = waving ? [67, 97.6, 74.5, 96.8] : null; // the thinking paw is tucked in: no sleeve
+  const SWc = o.body && SWEATER[o.body];
+  const sleeve = sh && SWc ? (() => {
+    const [x0, y0, x1, y1] = sh, c = o.body === 'sw_rainbow' ? RAINBOW[4] : SWc.c;
+    const d = `M${x0} ${y0} L${x1} ${y1}`, ux = (x1 - x0) / Math.hypot(x1 - x0, y1 - y0), uy = (y1 - y0) / Math.hypot(x1 - x0, y1 - y0);
+    return `<path d="${d}" stroke="${LINE}" stroke-width="13.6"/><path d="${d}" stroke="${c}" stroke-width="10.2"/><circle cx="${x0}" cy="${y0}" r="6.8" fill="${c}" clip-path="url(#${id}t)"/>
+      <path d="M${(x1 - ux * 1.8 + uy * 4.6).toFixed(2)} ${(y1 - uy * 1.8 - ux * 4.6).toFixed(2)} L${(x1 - ux * 1.8 - uy * 4.6).toFixed(2)} ${(y1 - uy * 1.8 + ux * 4.6).toFixed(2)}" stroke="${SWc.rib}" stroke-width="2.6" stroke-linecap="round"/>`;
+  })() : '';
   const tail = mood === 'sleep'
     ? `<path d="M86 108 C98 112 106 106 108 98" stroke="${LINE}" stroke-width="7.6" fill="none" stroke-linecap="round"/>
        <path d="M86 108 C98 112 106 106 108 98" stroke="${WHITE}" stroke-width="4.8" fill="none" stroke-linecap="round"/>
@@ -108,9 +224,8 @@ export function archie(mood = 'happy', cls = '', outfit = OUTFIT) {
       ? `<path d="M12 30 l4 -4 M8 44 l6 0 M108 30 l-4 -4 M112 44 l-6 0" stroke="#FFC83D" stroke-width="3" stroke-linecap="round"/>`
       : '';
   const HEAD = 'M60 13 C44 13 34 24 34 38 C34 48 39 54 43 60 C45 70 50 80 60 80 C70 80 75 70 77 60 C81 54 86 48 86 38 C86 24 76 13 60 13 Z';
-  return `<svg class="owl archie owl-${mood} ${cls}" viewBox="0 0 120 124" role="img" aria-label="Archie" focusable="false">
-  <defs><clipPath id="${id}"><path d="${HEAD}"/></clipPath><clipPath id="${id}b"><path d="${BODY}"/></clipPath></defs>
-  <g class="owl-body-g">
+  const defs = `<clipPath id="${id}"><path d="${HEAD}"/></clipPath><clipPath id="${id}b"><path d="${BODY}"/></clipPath><clipPath id="${id}t"><path d="M-10 -40 H130 V100 Q60 106 -10 100 Z"/></clipPath>`;
+  const g = `<g class="owl-body-g">
     ${tail}
     ${body}
     <!-- harness -->
@@ -118,7 +233,7 @@ export function archie(mood = 'happy', cls = '', outfit = OUTFIT) {
     <path d="M60 92 L60 106" stroke="${NAVY}" stroke-width="3.5" stroke-linecap="round"/>
     ${o.neck === 'bowtie' ? '' : `<circle cx="60" cy="91" r="5" fill="#FFC83D" stroke="${LINE}" stroke-width="1.3"/><circle cx="60" cy="91" r="2" fill="${NAVY}"/>`}
     ${o.neck === 'scarf' ? ACC.scarf : ''}
-    ${pawUp}
+    ${pawUp}${sleeve}
     <!-- head: brown with white blaze and long white muzzle -->
     <path d="${HEAD}" fill="${BROWN}"/>
     <g clip-path="url(#${id})">
@@ -135,7 +250,33 @@ export function archie(mood = 'happy', cls = '', outfit = OUTFIT) {
     ${o.neck === 'bowtie' ? ACC.bowtie : ''}
     ${o.hat && ACC[o.hat] ? ACC[o.hat] : ''}
     ${extra}
-  </g></svg>`;
+  </g>`;
+  return { defs, g };
+}
+
+// Archie alone (headers, coach strips, bubbles, toasts): wearables only.
+export function archie(mood = 'happy', cls = '', outfit = OUTFIT) {
+  const { defs, g } = archieParts(mood, outfit);
+  return `<svg class="owl archie owl-${mood} ${cls}" viewBox="0 0 120 124" role="img" aria-label="Archie" focusable="false">
+  <defs>${defs}</defs>${g}</svg>`;
+}
+
+// Archie at home: wearables plus his scene items (kennel behind him, toy and bowl next to him).
+// Only for the spots where he is shown large. Without scene items it is the same as archie().
+export function sceneBox(o) {
+  const minX = o.house ? (o.house === 'house_castle' ? -78 : -70) : o.toy ? -22 : 0;
+  const maxX = o.bowl ? 150 : 120;
+  const minY = o.house === 'house_castle' ? -28 : o.house ? -3 : 0;
+  return { x: minX, y: minY, w: maxX - minX, h: 128 - minY };
+}
+export function archieScene(mood = 'happy', cls = '', outfit = OUTFIT) {
+  const o = outfit || {};
+  if (!hasScene(o)) return archie(mood, cls, outfit);
+  const { defs, g } = archieParts(mood, o);
+  const b = sceneBox(o);
+  const ground = `<ellipse cx="${b.x + b.w / 2}" cy="122.5" rx="${b.w / 2 - 3}" ry="4.6" fill="#5B3A22" opacity=".1"/>`;
+  return `<svg class="owl archie archie-scene owl-${mood} ${cls}" viewBox="${b.x} ${b.y} ${b.w} ${b.h}" style="--ar:${(b.w / b.h).toFixed(4)};--sk:${(b.h / 124).toFixed(4)}" role="img" aria-label="Archie" focusable="false">
+  <defs>${defs}</defs>${ground}${o.house ? houseSVG(o.house) : ''}${o.toy && TOYS[o.toy] ? `<g class="scn scn-toy scn-${o.toy}">${TOYS[o.toy]()}</g>` : ''}${g}${o.bowl ? bowlSVG(o.bowl) : ''}</svg>`;
 }
 
 export const owl = archie;

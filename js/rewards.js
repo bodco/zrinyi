@@ -7,8 +7,10 @@ export const defaultGoal = (g) => (+g <= 3 ? 30 : 50);
 export const BONES = {
   correct: 4, // every correct answer (as in the real contest)
   wrong: 1, // taken away for a wrong answer (as in the real contest); skipped = 0
-  fixSelf: 3, // review: fixed by yourself
-  fixHint: 1, // review: fixed with hints
+  fixSelf: 5, // review: a WRONG answer fixed by yourself (a bit more than a correct answer; net -1 + 5 = 4, so answering wrong on purpose never pays)
+  fixHint: 3, // review: a wrong answer fixed with hints
+  fixSkipSelf: 3, // review: a SKIPPED problem fixed by yourself (less than solving it the first time, so skipping never pays)
+  fixSkipHint: 2, // review: a skipped problem fixed with hints
   done: { quick: 5, mistakes: 5, challenge: 8, full: 15, mock: 20, topic: 5 }
 };
 export const CHEST_DAYS = 5;
@@ -16,21 +18,45 @@ export const CHEST_BONES = 40;
 export const MIGRATE_PER_SESSION = 10;
 export const BLANKET_PRICE = 60;
 
-// Wardrobe. slot: harness | hat | neck | eyes. 'navy' is Archie's own harness (free).
+// Wardrobe. Wearables (harness | body | hat | neck | eyes) show on every Archie; scene items
+// (toy | bowl | house) only where Archie is shown large (archieScene). 'navy' is Archie's own harness (free).
+// rank: the item can be bought from this level on (new things appear as the child levels up).
+// Prices were set with tests/econ_sim.mjs. Items already bought always stay owned.
 export const ITEMS = [
   { id: 'navy', slot: 'harness', price: 0, color: '#2B3A67' },
-  { id: 'red', slot: 'harness', price: 40, color: '#DC2626' },
-  { id: 'green', slot: 'harness', price: 40, color: '#16A34A' },
-  { id: 'pink', slot: 'harness', price: 40, color: '#EC4899' },
-  { id: 'gold', slot: 'harness', price: 150, color: '#E0A400' },
-  { id: 'bowtie', slot: 'neck', price: 60 },
-  { id: 'scarf', slot: 'neck', price: 120 },
-  { id: 'glasses', slot: 'eyes', price: 80 },
-  { id: 'cap', slot: 'hat', price: 100 },
-  { id: 'crown', slot: 'hat', price: 500 }
+  { id: 'red', slot: 'harness', price: 70, rank: 2, color: '#DC2626' },
+  { id: 'green', slot: 'harness', price: 70, rank: 3, color: '#16A34A' },
+  { id: 'pink', slot: 'harness', price: 70, rank: 4, color: '#EC4899' },
+  { id: 'gold', slot: 'harness', price: 180, rank: 7, color: '#E0A400' },
+  { id: 'sw_red', slot: 'body', price: 120, rank: 4 },
+  { id: 'sw_blue', slot: 'body', price: 150, rank: 6 },
+  { id: 'sw_green', slot: 'body', price: 180, rank: 7 },
+  { id: 'sw_rainbow', slot: 'body', price: 300, rank: 9, premium: 1 },
+  { id: 'bowtie', slot: 'neck', price: 80, rank: 2 },
+  { id: 'scarf', slot: 'neck', price: 130, rank: 5 },
+  { id: 'glasses', slot: 'eyes', price: 90, rank: 3 },
+  { id: 'cap', slot: 'hat', price: 120, rank: 4 },
+  { id: 'crown', slot: 'hat', price: 380, rank: 9, premium: 1 },
+  { id: 'toy_small', slot: 'toy', price: 50 },
+  { id: 'toy_big', slot: 'toy', price: 150, rank: 6 },
+  { id: 'toy_gold', slot: 'toy', price: 260, rank: 8, premium: 1 },
+  { id: 'bowl_blue', slot: 'bowl', price: 30 },
+  { id: 'bowl_red', slot: 'bowl', price: 80, rank: 3 },
+  { id: 'bowl_green', slot: 'bowl', price: 90, rank: 5 },
+  { id: 'bowl_pink', slot: 'bowl', price: 90, rank: 6 },
+  { id: 'bowl_gold', slot: 'bowl', price: 220, rank: 8, premium: 1 },
+  { id: 'house_wood', slot: 'house', price: 130, rank: 5 },
+  { id: 'house_red', slot: 'house', price: 200, rank: 7 },
+  { id: 'house_blue', slot: 'house', price: 240, rank: 8 },
+  { id: 'house_castle', slot: 'house', price: 420, rank: 10, premium: 1 }
 ];
 export const itemById = (id) => ITEMS.find((x) => x.id === id) || null;
-export const SLOTS = ['harness', 'hat', 'neck', 'eyes'];
+export const WEAR_SLOTS = ['harness', 'body', 'hat', 'neck', 'eyes'];
+export const SCENE_SLOTS = ['toy', 'bowl', 'house'];
+export const SLOTS = WEAR_SLOTS.concat(SCENE_SLOTS);
+export const rankNeed = (it) => (it && it.rank) || 1;
+// can this item be bought at the child's level?
+export const unlocked = (rw, it) => rankOf((rw && rw.earned) || 0).n >= rankNeed(it);
 
 export function blankRw(g) {
   return { bones: 0, earned: 0, goal: defaultGoal(g), days: {}, goalDays: 0, freezes: 0, frozen: [], chests: {}, owned: ['navy'], outfit: { harness: 'navy' }, lvlSeen: 1, mig: 1 };
@@ -51,7 +77,7 @@ export function ensureRw(gr, g) {
   if (!Array.isArray(rw.owned)) rw.owned = ['navy'];
   if (!rw.owned.includes('navy')) rw.owned.unshift('navy');
   rw.owned = rw.owned.filter((id) => itemById(id));
-  for (const s of Object.keys(rw.outfit)) if (!SLOTS.includes(s) || !rw.owned.includes(rw.outfit[s])) delete rw.outfit[s];
+  for (const s of Object.keys(rw.outfit)) { const it = itemById(rw.outfit[s]); if (!SLOTS.includes(s) || !it || it.slot !== s || !rw.owned.includes(rw.outfit[s])) delete rw.outfit[s]; }
   if (!rw.outfit.harness) rw.outfit.harness = 'navy';
   if (!GOALS.includes(rw.goal)) rw.goal = defaultGoal(g);
   rw.bones = Math.max(0, Math.floor(+rw.bones || 0));
@@ -128,10 +154,14 @@ export function awardSession(gr, rec, streakRes = {}, today = dayKey()) {
 }
 
 // Review: a mistake fixed during the guided review. Each problem of a session pays once (item.rb flag).
+export function fixPay(item, withHints) {
+  const skipped = !!item && item.ok !== false;
+  return skipped ? (withHints ? BONES.fixSkipHint : BONES.fixSkipSelf) : (withHints ? BONES.fixHint : BONES.fixSelf);
+}
 export function awardReviewFix(gr, item, withHints, today = dayKey()) {
   if (!item || item.rb) return null;
   item.rb = 1;
-  return addBones(gr, withHints ? BONES.fixHint : BONES.fixSelf, today);
+  return addBones(gr, fixPay(item, withHints), today);
 }
 
 // Wardrobe
@@ -143,7 +173,7 @@ export function buy(gr, id) {
     return true;
   }
   const it = itemById(id);
-  if (!it || rw.owned.includes(id) || rw.bones < it.price) return false;
+  if (!it || rw.owned.includes(id) || rw.bones < it.price || !unlocked(rw, it)) return false;
   rw.bones -= it.price;
   rw.owned.push(id);
   rw.outfit[it.slot] = id;
@@ -156,10 +186,16 @@ export function toggleWear(gr, id) {
   else rw.outfit[it.slot] = id;
   return true;
 }
-// outfit for the mascot: {harness: color, hat, neck, eyes}
+// outfit for the mascot: {harness: color, body, hat, neck, eyes, toy, bowl, house} (ids, null when empty)
 export function outfitFor(rw) {
   if (!rw) return null;
   const o = rw.outfit || {};
   const h = itemById(o.harness);
-  return { harness: h ? h.color : null, hat: o.hat || null, neck: o.neck || null, eyes: o.eyes || null };
+  const out = { harness: h ? h.color : null };
+  for (const s of SLOTS) if (s !== 'harness') out[s] = o[s] || null;
+  return out;
+}
+// the look with one item tried on (shop preview, buy dialog)
+export function lookWith(rw, it) {
+  return Object.assign({}, outfitFor(rw), { [it.slot]: it.slot === 'harness' ? it.color : it.id });
 }

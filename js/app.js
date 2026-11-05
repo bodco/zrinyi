@@ -2,7 +2,7 @@ import { STR, TOPICS, BADGE_ICONS, PARENTS } from './i18n.js';
 import * as store from './store.js';
 import * as L from './logic.js';
 import * as R from './rewards.js';
-import { owl, archie, star, bone, setOutfit } from './mascot.js';
+import { owl, archie, archieScene, star, bone, setOutfit } from './mascot.js';
 
 const GRADES = [2, 3, 4, 5, 6, 7, 8];
 const LETTERS = ['A', 'B', 'C', 'D', 'E'];
@@ -57,6 +57,17 @@ function ringSVG(val, goal, to = null, cls = '') {
     <circle cx="32" cy="32" r="${RING_R}" class="ring-fg" stroke-dasharray="${RING_C.toFixed(1)}" style="stroke-dashoffset:${ringOff(val, goal)}" transform="rotate(-90 32 32)" ${to != null ? `data-off="${ringOff(to, goal)}" data-done="${done ? 1 : 0}"` : ''}/></svg>`;
 }
 const rankName = (n) => t('rankNames')[Math.min(n, t('rankNames').length) - 1];
+// review gate of a grade: {sid, n} or null. Pending problems that can no longer be reviewed are dropped first.
+function gateOf(g) {
+  const gr = store.grade(g);
+  if (!gr.pendingReview) return null;
+  if (Array.isArray(S.data[g])) L.prunePending(gr, (id) => !!S.byId[id]);
+  const pr = L.reviewGate(gr);
+  if (!pr) { store.save(); return null; }
+  return { sid: pr.sid, n: L.pendingCount(gr) };
+}
+const gateHref = (g, gt) => `#/g/${g}/review/${gt.sid}`;
+const gateToast = (gt) => toast(esc(t('gateTitle', gt.n)), 2800, 'point');
 const starsRow = (n, cls = '') => `<span class="stars ${cls}" aria-label="${n}/3">${[1, 2, 3].map((i) => star(i <= n, `s${i}`)).join('')}</span>`;
 
 function route() {
@@ -191,7 +202,7 @@ function modalHTML() {
   if (!m) return '';
   let body = '';
   if (m.type === 'confirm') {
-    body = `${m.outfit ? archie(m.mood || 'happy', 'owl-lg', m.outfit) : owl(m.mood || 'think', 'owl-md')}<h2 id="mt">${esc(m.title)}</h2><p>${esc(m.text)}</p>
+    body = `${m.outfit ? archieScene(m.mood || 'happy', 'owl-lg sc-modal', m.outfit) : owl(m.mood || 'think', 'owl-md')}<h2 id="mt">${esc(m.title)}</h2><p>${esc(m.text)}</p>
       <div class="mbtns"><button class="btn ghost" data-act="modal-no">${esc(m.no)}</button><button class="btn ${m.danger ? 'danger' : 'primary'}" data-act="modal-yes">${esc(m.yes)}</button></div>`;
   } else if (m.type === 'nickname') {
     const gr = store.grade(m.g);
@@ -310,7 +321,7 @@ function screenHome(g) {
   const act = gr.active && gr.active.ids.every((id) => S.byId[id]) ? gr.active : null;
   const done = act ? act.answers.filter((a, i) => i < act.idx || a).length : 0;
   const goalOk = tb >= rw.goal;
-  const say = act && act.mode === 'full' ? t('homeSayFull') : mist ? t('homeSayMist', mist) : goalOk ? t('homeSayGoal') : sum.streak >= 2 ? t('homeSayStreak', sum.streak) : sum.sessions ? t('homeSayBack') : t('homeSayNew');
+  const say = gateOf(g) ? t('homeSayGate') : act && act.mode === 'full' ? t('homeSayFull') : mist ? t('homeSayMist', mist) : goalOk ? t('homeSayGoal') : sum.streak >= 2 ? t('homeSayStreak', sum.streak) : sum.sessions ? t('homeSayBack') : t('homeSayNew');
   const mm = L.mockMinutes(g);
   const nPaper = Math.min(L.mockN(g), regOf(g).length);
   const prot = L.streakProtected(gr, today);
@@ -319,10 +330,22 @@ function screenHome(g) {
   const actN = R.activeDaysThisWeek(rw, today);
   const chestOpen = !!rw.chests[R.weekKey(today)];
   const wd = t('weekdays');
+  const gt = gateOf(g);
+  // mode card: when the review gate is on, practice modes are locked (a tap explains why instead of starting)
+  const modeBtn = (cls, act, attrs, inner, go = '') => gt && cls !== 'm-mist'
+    ? `<button class="mode ${cls} locked" data-act="gated" aria-label="${esc(inner.label)}: ${esc(t('lockedMode'))}">${inner.html}<span class="lock" aria-hidden="true">🔒</span></button>`
+    : `<button class="mode ${cls}" data-act="${act}" ${attrs}>${inner.html}${go}</button>`;
+  const mi = (icon, label, sub) => ({ label, html: `<span class="mi" aria-hidden="true">${icon}</span><span class="mt"><b>${label}</b><small>${sub}</small></span>` });
+  const goArrow = '<span class="go" aria-hidden="true">›</span>';
   return `${topBar({ back: '#/', title: t('gradeN', g) })}
   <main class="wrap home">
-    <section class="greet">
-      ${owl(mist ? 'point' : goalOk || sum.streak >= 2 ? 'cheer' : 'wave', 'owl-lg bob')}
+    ${gt ? `<section class="gate" aria-live="polite">
+      ${owl('point', 'owl-md')}
+      <div class="gate-t"><h2>${esc(t('gateTitle', gt.n))}</h2><p>${esc(t('gateSub'))}</p></div>
+      <button class="btn primary big" data-act="nav" data-to="${gateHref(g, gt)}">🔍 ${t('gateBtn')}</button>
+    </section>` : ''}
+    <section class="greet ${R.outfitFor(rw).house ? 'has-house' : ''}">
+      ${archieScene(gt ? 'point' : mist ? 'point' : goalOk || sum.streak >= 2 ? 'cheer' : 'wave', 'owl-lg sc-home bob')}
       <div class="greet-txt">
         <h2 class="h-big">${esc(t('hello', gr.nickname))}</h2>
         <p class="greet-say">${esc(say)}</p>
@@ -361,10 +384,10 @@ function screenHome(g) {
       <div class="row"><button class="btn ghost sm" data-act="discard">${t('discard')}</button><button class="btn primary sm" data-act="resume">${t('resume')}</button></div>
     </section>` : ''}
     <section class="modes">
-      <button class="mode m-quick" data-act="start" data-mode="quick"><span class="mi" aria-hidden="true">⚡</span><span class="mt"><b>${t('modeQuick')}</b><small>${t('modeQuickSub')}</small></span><span class="go" aria-hidden="true">›</span></button>
-      <button class="mode m-full" data-act="start" data-mode="full"><span class="mi" aria-hidden="true">📝</span><span class="mt"><b>${t('modeFull')}</b><small>${t('modeFullSub', nPaper)}</small></span><span class="go" aria-hidden="true">›</span></button>
-      <button class="mode m-mock" data-act="nav" data-to="#/g/${g}/mock"><span class="mi" aria-hidden="true">🏆</span><span class="mt"><b>${t('modeMock')}</b><small>${t('modeMockSub', nPaper, mm)}</small></span></button>
-      ${nch ? `<button class="mode m-chal" data-act="start" data-mode="challenge"><span class="mi" aria-hidden="true">🚀</span><span class="mt"><b>${t('modeChallenge')}</b><small>${t('modeChallengeSub', nch)}</small></span></button>` : ''}
+      ${modeBtn('m-quick', 'start', 'data-mode="quick"', mi('⚡', t('modeQuick'), t('modeQuickSub')), goArrow)}
+      ${modeBtn('m-full', 'start', 'data-mode="full"', mi('📝', t('modeFull'), t('modeFullSub', nPaper)), goArrow)}
+      ${modeBtn('m-mock', 'nav', `data-to="#/g/${g}/mock"`, mi('🏆', t('modeMock'), t('modeMockSub', nPaper, mm)))}
+      ${nch ? modeBtn('m-chal', 'start', 'data-mode="challenge"', mi('🚀', t('modeChallenge'), t('modeChallengeSub', nch))) : ''}
       <button class="mode m-mist" data-act="start" data-mode="mistakes" ${mist ? '' : 'disabled'}><span class="mi" aria-hidden="true">🔧</span><span class="mt"><b>${t('modeMistakes')}</b><small>${t('modeMistakesSub', mist)}</small></span>${mist ? `<span class="badge-n">${mist}</span>` : ''}</button>
       <button class="mode m-shop" data-act="nav" data-to="#/g/${g}/shop"><span class="mi" aria-hidden="true">${owl('happy', 'owl-mi')}</span><span class="mt"><b>${t('modeShop')}</b><small>${t('modeShopSub')}</small></span></button>
       <button class="mode m-prog" data-act="nav" data-to="#/g/${g}/progress"><span class="mi" aria-hidden="true">📈</span><span class="mt"><b>${t('modeProgress')}</b><small>${t('modeProgressSub')}</small></span></button>
@@ -386,35 +409,46 @@ function screenHome(g) {
 function screenShop(g) {
   const gr = store.grade(g);
   const rw = gr.rw;
-  const cur = R.outfitFor(rw);
   const names = t('items');
   const card = (it) => {
     const owned = rw.owned.includes(it.id);
     const worn = rw.outfit[it.slot] === it.id;
-    const look = Object.assign({}, cur, { [it.slot]: it.slot === 'harness' ? it.color : it.id });
+    const open = R.unlocked(rw, it);
+    const look = R.lookWith(rw, it);
+    const scene = R.SCENE_SLOTS.includes(it.slot);
+    // scene previews show only the item tried on, so the small picture stays readable
+    const prevLook = scene ? Object.assign({}, look, { toy: null, bowl: null, house: null, [it.slot]: it.id }) : look;
     let btn;
     if (worn && it.id === 'navy') btn = `<span class="worn-l">✓ ${t('wearing')}</span>`;
     else if (worn) btn = `<button class="btn ghost sm" data-act="wear" data-id="${it.id}">${t('takeOff')}</button>`;
     else if (owned) btn = `<button class="btn second sm" data-act="wear" data-id="${it.id}">${t('wear')}</button>`;
+    else if (!open) btn = `<button class="btn ghost sm buy" disabled aria-label="${esc(names[it.id])}: ${esc(t('rankLockAria', R.rankNeed(it)))}">🔒 ${esc(t('rankLock', R.rankNeed(it)))}</button><small class="need">${bone()} ${it.price}</small>`;
     else if (rw.bones >= it.price) btn = `<button class="btn primary sm buy" data-act="buy" data-id="${it.id}" aria-label="${esc(names[it.id])}: ${esc(t('bonesN', it.price))}">${bone()} ${it.price}</button>`;
     else btn = `<button class="btn ghost sm buy" disabled aria-label="${esc(names[it.id])}: ${esc(t('bonesN', it.price))}">${bone()} ${it.price}</button><small class="need">${t('needMore', it.price - rw.bones)}</small>`;
-    return `<li class="item ${worn ? 'worn' : ''} ${owned ? 'owned' : ''}">
-      ${worn && it.id !== 'navy' ? `<span class="item-tag">✓ ${t('wearing')}</span>` : ''}
-      <span class="item-prev">${archie('happy', 'owl-item', look)}</span>
+    return `<li class="item ${worn ? 'worn' : ''} ${owned ? 'owned' : ''} ${!open && !owned ? 'locked' : ''} ${scene ? 'scene' : ''} ${it.premium ? 'premium' : ''}">
+      ${worn && it.id !== 'navy' ? `<span class="item-tag">✓ ${t('wearing')}</span>` : it.premium && !owned ? `<span class="item-tag prem">✨ ${t('premium')}</span>` : ''}
+      <span class="item-prev">${(scene ? archieScene : archie)('happy', 'owl-item', prevLook)}</span>
       <b>${esc(names[it.id])}</b>${btn}</li>`;
   };
+  const shelf = (slot) => {
+    const list = R.ITEMS.filter((it) => it.slot === slot).sort((x, y) => x.price - y.price);
+    const have = list.filter((it) => rw.owned.includes(it.id) && it.price > 0).length, all = list.filter((it) => it.price > 0).length;
+    return `<section class="shelf" data-slot="${slot}"><h3><span>${t('slots')[slot]}</span><small>${have}/${all}</small></h3><ul class="items">${list.map(card).join('')}</ul></section>`;
+  };
+  const group = (key, slots) => `<div class="shop-group"><h2 class="sg-h"><span aria-hidden="true">${key === 'wear' ? '👕' : '🏡'}</span> ${t('slotGroups')[key]}</h2>${slots.map(shelf).join('')}</div>`;
   const canBlanket = rw.freezes < L.FREEZE_MAX;
   return `${topBar({ back: `#/g/${g}`, title: t('shopTitle'), sub: gr.nickname ? `${gr.nickname}, ${t('gradeN', g)}` : t('gradeN', g) })}
   <main class="wrap shop">
-    <section class="shop-hero">
-      ${owl('cheer', 'owl-hero pop')}
+    <section class="shop-hero ${R.outfitFor(rw).house ? 'has-house' : ''}">
+      ${archieScene('cheer', 'owl-hero sc-shop pop')}
       <div class="shop-hero-t">
         <span class="bones-pill big" aria-label="${esc(t('bonesN', rw.bones))}">${bone()}<b>${rw.bones}</b></span>
         <p>${esc(t('shopSay'))}</p>
       </div>
     </section>
-    ${R.SLOTS.map((slot) => `<section class="shelf"><h3>${t('slots')[slot]}</h3><ul class="items">${R.ITEMS.filter((it) => it.slot === slot).map(card).join('')}</ul></section>`).join('')}
-    <section class="shelf"><h3>${t('slots').extra}</h3>
+    ${group('wear', R.WEAR_SLOTS)}
+    ${group('home', ['house', 'toy', 'bowl'])}
+    <section class="shelf extra"><h3><span>${t('slots').extra}</span></h3>
       <div class="blanket-card">
         <span class="blk-big">${blanketIcon()}</span>
         <div class="bc-t"><b>${t('blanketName')}</b><small>${t('blanketDesc')}</small><span class="bc-n">${blanketIcon('sm')} ${rw.freezes}/${L.FREEZE_MAX}</span></div>
@@ -540,10 +574,11 @@ function screenResults(g, id) {
   const hintedN = rec.items.filter((x) => x.h).length;
   const rsay = chal ? t('resChallenge') : stars === 3 && !toReview ? t('resSayPerfect') : hintedN ? t('resSayHints', hintedN) : toReview ? t('resSayMist') : '';
   const newB = S.newBadges && S.newBadges.sid === rec.id ? S.newBadges.ids : [];
+  const gt = gateOf(g);
   return `${topBar({ back: `#/g/${g}`, title: t('modeNames')[rec.mode] + (rec.topic ? `: ${topicName(rec.topic)}` : '') })}
   <main class="wrap results">
     <section class="rhero s${stars}">
-      ${owl(stars >= 1 || chal ? 'cheer' : 'oops', 'owl-lg pop')}
+      ${archieScene(stars >= 1 || chal ? 'cheer' : 'oops', 'owl-lg sc-res pop')}
       <h2 class="h-big">${title}</h2>
       ${chal ? '' : starsRow(stars, 'lg pop-stars')}
       ${mock ? `<div class="bigscore"><b>${rec.score}</b><span>/ ${L.mockMax(rec.n)} ${t('points')}</span><small>${t('zrinyiScore')}</small></div>` : `<div class="bigscore"><b>${rec.correct}</b><span>/ ${rec.n}</span></div>`}
@@ -559,8 +594,9 @@ function screenResults(g, id) {
     ${rsay && !chal ? bubble(esc(rsay), toReview ? 'point' : 'cheer', 'rsay') : ''}
     ${newB.length ? `<section class="newbadges"><h3>${t('newBadge')}</h3>${newB.map((b) => `<div class="nb"><span>${BADGE_ICONS[b]}</span><b>${esc(t('badgeDefs')[b][0])}</b></div>`).join('')}</section>` : ''}
     <div class="cta-col">
-      ${toReview ? `<button class="btn primary big" data-act="nav" data-to="#/g/${g}/review/${rec.id}">🔍 ${t('reviewMistakes')} (${toReview})</button>` : `<p class="perfect">${t('noMistakes')}</p>`}
-      <div class="row"><button class="btn second" data-act="again" data-mode="${rec.mode}" data-topic="${rec.topic || ''}">↻ ${t('again')}</button><button class="btn ghost" data-act="nav" data-to="#/g/${g}">${t('home')}</button></div>
+      ${gt ? `<button class="btn primary big gate-btn" data-act="nav" data-to="${gateHref(g, gt)}">🔍 ${t('gateBtn')} (${gt.n})</button>`
+        : toReview ? `<button class="btn primary big" data-act="nav" data-to="#/g/${g}/review/${rec.id}">🔍 ${t('reviewMistakes')} (${toReview})</button>` : `<p class="perfect">${t('noMistakes')}</p>`}
+      <div class="row">${gt ? '' : `<button class="btn second" data-act="again" data-mode="${rec.mode}" data-topic="${rec.topic || ''}">↻ ${t('again')}</button>`}<button class="btn ghost" data-act="nav" data-to="#/g/${g}">${t('home')}</button></div>
     </div>
     <section class="card">
       <h3>${t('byTopic')}</h3>
@@ -640,7 +676,10 @@ function initReview(g, sid, startAt) {
   const gr = store.grade(g);
   const rec = sessionById(gr, sid);
   if (!rec || !rec.items) return null;
-  const list = rec.items.map((it, i) => ({ ...it, n: i + 1 })).filter((x) => !x.ok && S.byId[x.id]);
+  let list = rec.items.map((it, i) => ({ ...it, n: i + 1 })).filter((x) => !x.ok && S.byId[x.id]);
+  // opened from the gate (no start problem): only the problems still to do
+  const pr = L.reviewGate(gr);
+  if (startAt == null && pr && pr.sid === rec.id) { const left = list.filter((x) => pr.ids.includes(x.id)); if (left.length) list = left; }
   let i = 0;
   if (startAt != null) { const k = list.findIndex((x) => x.n === +startAt + 1); if (k >= 0) i = k; }
   S.rv = { g, sid: rec.id, list, i, solvedSelf: 0, solvedHints: 0, bones: 0, card: null, done: false };
@@ -698,10 +737,13 @@ function screenReview(g, sid, startAt) {
     allDisabled: c.status !== 'trying',
     act: 'rv-opt'
   });
-  const tryTitle = c.status === 'trying' ? `<h3 class="trytitle">${c.tried.length ? t('tryAgain') : t('tryNow')} <small>${c.tried.length ? t('tryAgainSub') : ''}</small></h3>` : '';
+  const recItem = (sessionById(store.grade(g), rv.sid) || { items: [] }).items[it.n - 1];
+  const pay = recItem && !recItem.rb ? R.fixPay(recItem, !!c.hl) : 0;
+  const payChip = pay ? `<span class="fixpay" title="${esc(t('fixPay'))}" aria-label="${esc(t('fixPay'))}: ${esc(t('plusBones', pay))}">+${pay} ${bone()}</span>` : '';
+  const tryTitle = c.status === 'trying' ? `<h3 class="trytitle">${c.tried.length ? t('tryAgain') : t('tryNow')} <small>${c.tried.length ? t('tryAgainSub') : ''}</small>${payChip}</h3>` : '';
   let celebrate = '';
   if (c.status === 'solved') {
-    celebrate = `<div class="celebrate" data-focus>${owl('cheer', 'owl-md pop')}<div><h3>${c.hl ? t('fixedHintsTitle') : c.orig ? t('fixedYourself') : t('solvedNow')}</h3><p>${t('fixedText')}</p></div></div>`;
+    celebrate = `<div class="celebrate" data-focus>${owl('cheer', 'owl-md pop')}<div><h3>${c.hl ? t('fixedHintsTitle') : c.orig ? t('fixedYourself') : t('solvedNow')}</h3><p>${t('fixedText')}</p>${c.paid ? `<span class="fixpay got">+${c.paid} ${bone()}</span>` : ''}</div></div>`;
   }
   let sol = '';
   if (c.showSol) {
@@ -746,7 +788,7 @@ function reviewDone(g) {
     ${bubble(esc(t('rvDoneSay')), 'cheer')}
     ${z ? `<p class="lead sm">${t('fixedWithHintsLine', z)}</p>` : ''}
     <div class="cta-col">
-      <button class="btn primary big" data-act="start" data-mode="quick">⚡ ${t('modeQuick')}</button>
+      ${gateOf(g) ? `<button class="btn primary big" data-act="nav" data-to="${gateHref(g, gateOf(g))}">🔍 ${t('gateBtn')} (${gateOf(g).n})</button>` : `<button class="btn primary big" data-act="start" data-mode="quick">⚡ ${t('modeQuick')}</button>`}
       <div class="row"><button class="btn second" data-act="nav" data-to="#/g/${g}/progress">📈 ${t('modeProgress')}</button><button class="btn ghost" data-act="nav" data-to="#/g/${g}">${t('home')}</button></div>
     </div>
   </main>`;
@@ -899,6 +941,8 @@ async function startSession(mode, topic) {
   const g = r.g;
   const all = S.data[g];
   const gr = store.grade(g);
+  const gt = mode !== 'mistakes' ? gateOf(g) : null;
+  if (gt) { gateToast(gt); if (route().name !== 'home') go(`#/g/${g}`); return; }
   const old = gr.active && gr.active.ids.every((id) => S.byId[id]) ? gr.active : null;
   if (old && (old.idx > 0 || old.answers.some(Boolean))) {
     const done = old.answers.filter((a, i) => i < old.idx || a).length;
@@ -1105,6 +1149,22 @@ function afterAutoHint() {
   window.scrollBy({ top: delta, behavior: reduceMotion() ? 'auto' : 'smooth' });
 }
 
+/* review gate: the current review card is finished (fixed, or the whole solution was seen) */
+function rvItemDone() {
+  const rv = S.rv;
+  if (!rv || !rv.list[rv.i]) return;
+  const gr = store.grade(rv.g);
+  const opened = L.reviewItemDone(gr, rv.list[rv.i].id);
+  store.save();
+  if (opened) setTimeout(() => toast(esc(t('gateOpen')), 2800, 'cheer'), 900);
+}
+function failedSeen() {
+  const rv = S.rv, c = rv && rv.card;
+  if (!c || c.status !== 'failed' || c.doneMarked) return;
+  const p = S.byId[rv.list[rv.i].id];
+  if (c.steps >= p.steps[S.lang].length) { c.doneMarked = true; rvItemDone(); }
+}
+
 /* ---------------- actions ---------------- */
 const A = {
   nav(el) { go(el.dataset.to); },
@@ -1114,6 +1174,7 @@ const A = {
   'nick-skip'() { const gr = store.grade(route().g); gr.asked = true; store.save(); closeModal(); },
   level(el) { const gr = store.grade(route().g); gr.level = el.dataset.lv; store.save(); S.keepScroll = true; render(); },
   start(el) { startSession(el.dataset.mode, el.dataset.topic); },
+  gated() { const gt = gateOf(route().g); if (gt) gateToast(gt); else render(); },
   hint() {
     if (Date.now() < S.hintLock) return;
     if (!openQuizHint()) return;
@@ -1140,6 +1201,7 @@ const A = {
     const c = S.rv.card;
     if (c.status !== 'trying') return;
     c.status = 'failed'; c.showSol = true; c.steps = 1; c.sel = null;
+    failedSeen();
     S.lockUntil = Date.now() + 300;
     S.keepScroll = true; S.scrollToFocus = true;
     render();
@@ -1224,8 +1286,10 @@ const A = {
       if (st && st.wrong > 0) L.markFixed(gr, it.id);
       const rec = sessionById(gr, rv.sid);
       const got = R.awardReviewFix(gr, rec && rec.items ? rec.items[it.n - 1] : null, !!c.hl);
+      if (got) c.paid = got.n;
       L.checkBadges(gr, S.byId, [...new Set(regOf(rv.g).map((q) => q.topic))]);
       store.save();
+      rvItemDone();
       if (got) {
         rv.bones += got.n + got.chest;
         const msg = got.levelUp ? `${t('levelUpTitle')} ${rankName(got.levelUp)}` : got.goalHit ? t('goalHitToast') : got.chest ? t('chestTitle') : t('plusBones', got.n);
@@ -1234,7 +1298,7 @@ const A = {
       confetti(40);
     } else {
       c.tried.push(c.sel);
-      if (c.tried.length >= 2) { c.status = 'failed'; c.showSol = true; c.steps = 1; }
+      if (c.tried.length >= 2) { c.status = 'failed'; c.showSol = true; c.steps = 1; failedSeen(); }
       else ahRestartGap();
     }
     c.sel = null;
@@ -1246,7 +1310,7 @@ const A = {
     }
   },
   'rv-sol'() { const c = S.rv.card; c.showSol = true; c.steps = 1; S.keepScroll = true; S.scrollToFocus = true; render(); },
-  'rv-step'() { if (locked()) return; S.lockUntil = Date.now() + 250; const c = S.rv.card; c.steps++; S.keepScroll = true; S.scrollToFocus = true; render(); },
+  'rv-step'() { if (locked()) return; S.lockUntil = Date.now() + 250; const c = S.rv.card; c.steps++; failedSeen(); S.keepScroll = true; S.scrollToFocus = true; render(); },
   'rv-next'() {
     if (locked()) return;
     const rv = S.rv;
@@ -1266,7 +1330,7 @@ const A = {
     const it = R.itemById(id);
     const price = id === 'blanket' ? R.BLANKET_PRICE : it.price;
     const name = id === 'blanket' ? t('blanketName') : t('items')[id];
-    const look = it ? Object.assign({}, R.outfitFor(gr.rw), { [it.slot]: it.slot === 'harness' ? it.color : id }) : null;
+    const look = it ? R.lookWith(gr.rw, it) : null;
     const ok = await confirmBox({ title: t('buyTitle', name), text: t('buyText', price, gr.rw.bones - price), yes: t('buyYes'), no: t('cancel'), mood: 'happy', outfit: look });
     if (!ok || !R.buy(gr, id)) return;
     store.save();

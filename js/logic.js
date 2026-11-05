@@ -300,10 +300,63 @@ export function finishSession(gr, sess, byId, topicsInData, today = dayKey()) {
     timeSec: Math.round(sess.elapsed / 1000), items
   };
   gr.sessions.push(record);
+  if (sess.mode === 'mistakes') items.forEach((it) => { if (it.ok === true) reviewItemDone(gr, it.id); });
+  setPendingReview(gr, record);
   const streakRes = bumpStreak(gr, today);
   gr.active = null;
   const newBadges = checkBadges(gr, byId, topicsInData);
   return { record, newBadges, streakRes };
+}
+
+/* Review gate: after a session with wrong or skipped problems the child goes through the mistake
+   review of that session before a new session can start. gr.pendingReview = {sid, ids, queue?}:
+   ids are the problems still to do; an item is done when fixed in review (correct on retry), when its
+   review card was finished (full solution seen), or when it was answered right in "mistakes" mode.
+   Saves without the field (older versions) have no gate. */
+export const GATE_MODES = ['quick', 'full', 'challenge', 'mock'];
+export function setPendingReview(gr, rec) {
+  if (!rec || !GATE_MODES.includes(rec.mode)) return null;
+  const ids = [...new Set((rec.items || []).filter((x) => x.ok !== true).map((x) => x.id))];
+  if (!ids.length) return null;
+  const pr = gr.pendingReview;
+  const entry = { sid: rec.id, ids };
+  if (pr && pr.ids && pr.ids.length) { pr.queue = (pr.queue || []).concat([entry]); return pr; } // finish the older one first
+  gr.pendingReview = entry;
+  return entry;
+}
+// the current gate entry ({sid, ids}) or null; empty entries move on to the queued one
+export function reviewGate(gr) {
+  let pr = gr && gr.pendingReview;
+  while (pr && (!Array.isArray(pr.ids) || !pr.ids.length)) {
+    const q = (pr && pr.queue) || [];
+    pr = gr.pendingReview = q.length ? Object.assign(q[0], q.length > 1 ? { queue: q.slice(1) } : {}) : null;
+  }
+  return pr || null;
+}
+export function pendingCount(gr) {
+  const pr = reviewGate(gr);
+  if (!pr) return 0;
+  return pr.ids.length + (pr.queue || []).reduce((a, e) => a + e.ids.length, 0);
+}
+export const isGated = (gr) => pendingCount(gr) > 0;
+// mark one problem as done for the gate (any pending session that has it). Returns true when the gate just opened.
+export function reviewItemDone(gr, id) {
+  const pr = gr.pendingReview;
+  if (!pr) return false;
+  const before = pendingCount(gr);
+  for (const e of [pr].concat(pr.queue || [])) e.ids = (e.ids || []).filter((x) => x !== id);
+  return before > 0 && pendingCount(gr) === 0;
+}
+// drop what can no longer be reviewed (session or problem gone), so the gate can never get stuck
+export function prunePending(gr, exists) {
+  const pr = gr.pendingReview;
+  if (!pr) return;
+  for (const e of [pr].concat(pr.queue || [])) {
+    const rec = gr.sessions.find((s) => s.id === e.sid);
+    e.ids = rec && rec.items ? (e.ids || []).filter((id) => exists(id) && rec.items.some((x) => x.id === id && x.ok !== true)) : [];
+  }
+  if (pr.queue) pr.queue = pr.queue.filter((e) => e.ids.length);
+  reviewGate(gr);
 }
 
 export function markFixed(gr, id) {

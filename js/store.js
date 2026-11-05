@@ -12,7 +12,7 @@ function blank() {
 }
 
 export function blankGrade() {
-  return { nickname: '', asked: false, sessions: [], problemStats: {}, badges: [], streak: { last: null, count: 0 }, fixedTotal: 0, active: null, rw: null };
+  return { nickname: '', asked: false, sessions: [], problemStats: {}, badges: [], streak: { last: null, count: 0 }, fixedTotal: 0, active: null, rw: null, pendingReview: null };
 }
 
 export function load() {
@@ -75,6 +75,7 @@ export function parseImport(obj) {
   for (const [k, v] of Object.entries(obj.grades)) {
     if (!/^[2-8]$/.test(k) || !v || !Array.isArray(v.sessions) || typeof v.problemStats !== 'object') continue;
     out[k] = Object.assign(blankGrade(), v, { active: null });
+    if (out[k].pendingReview && !Array.isArray(out[k].pendingReview.ids)) out[k].pendingReview = null;
     ensureRw(out[k], k); // files from older versions get their starting bones; broken reward fields are repaired
   }
   return Object.keys(out).length ? out : null;

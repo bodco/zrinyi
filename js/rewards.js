@@ -186,20 +186,32 @@ export function addBones(gr, n, today = dayKey(), opts = {}) {
   const goalHit = before.day < rw.goal && after.day >= rw.goal;
   let goalBonus = 0;
   if (goalHit) { rw.goalDays = (rw.goalDays || 0) + 1; goalBonus = GOAL_BONUS; rw.bones += goalBonus; rw.earned += goalBonus; }
-  let chest = 0;
+  // the weekly chest is not paid automatically: it becomes READY (2) and the child opens it on the home screen (claimChest -> 1)
+  const chest = 0;
+  let chestReady = false;
   const wk = weekKey(today);
   if (opts.countsForDay !== false && !rw.chests[wk] && activeDaysThisWeek(rw, today) >= chestDays(rw.g)) {
-    rw.chests[wk] = 1;
-    chest = chestBones(rw.g);
-    rw.bones += chest;
-    rw.earned += chest;
+    rw.chests[wk] = 2;
+    chestReady = true;
   }
   const levelAfter = rankOf(rw.earned).n;
   const levelUp = levelAfter > rw.lvlSeen ? levelAfter : 0;
   if (levelUp) rw.lvlSeen = levelAfter;
   pruneDays(rw, today);
-  return { n, chest, goal: rw.goal, dayBefore: before.day, dayAfter: after.day, goalHit, goalBonus, levelBefore: before.level, levelUp, earnedBefore: before.earned, earnedAfter: rw.earned };
+  return { n, chest, chestReady, goal: rw.goal, dayBefore: before.day, dayAfter: after.day, goalHit, goalBonus, levelBefore: before.level, levelUp, earnedBefore: before.earned, earnedAfter: rw.earned };
 }
+// open a ready weekly chest (any week still listed); returns {n, levelUp} or null
+export function claimChest(gr) {
+  const rw = gr.rw;
+  const wk = Object.keys(rw.chests || {}).sort().reverse().find((k) => rw.chests[k] === 2);
+  if (!wk) return null;
+  rw.chests[wk] = 1;
+  const n = chestBones(rw.g);
+  const res = { n, levelUp: 0 };
+  addGift(rw, res, n);
+  return res;
+}
+export const chestState = (rw, today = dayKey()) => (Object.values(rw.chests || {}).includes(2) ? 'ready' : rw.chests && rw.chests[weekKey(today)] === 1 ? 'opened' : 'closed');
 // extra bones that are not practice (surprise gift): bones + level, not the daily goal
 function addGift(rw, res, n) {
   rw.bones += n; rw.earned += n;

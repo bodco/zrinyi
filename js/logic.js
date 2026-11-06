@@ -399,7 +399,7 @@ export function checkBadges(gr, byId, topicsInData) {
     streak14: gr.streak.count >= 14,
     fullDone: s.some((x) => x.mode === 'full'),
     goal7: !!rw && (rw.goalDays || 0) >= 7,
-    chest: !!rw && Object.keys(rw.chests || {}).length >= 1,
+    chest: !!rw && Object.values(rw.chests || {}).some((v) => v === 1),
     level3: !!rw && rankOf(rw.earned || 0).n >= 3,
     level5: !!rw && rankOf(rw.earned || 0).n >= 5,
     fix1: (gr.fixedTotal || 0) >= 1 || (!!rw && (rw.fixN || 0) >= 1),

@@ -76,6 +76,7 @@ function route() {
   const h = location.hash.replace(/^#\/?/, '');
   const parts = h.split('/').filter(Boolean);
   if (parts[0] === 'parents') return { name: 'parents' };
+  if (parts[0] === 'szulo' && parts[1]) return { name: 'admin', arg: parts[1] };
   if (parts[0] === 'g' && GRADES.includes(+parts[1])) {
     return { name: parts[2] || 'home', g: +parts[1], arg: parts[3] || null };
   }
@@ -331,7 +332,7 @@ function screenHome(g) {
   const frozen = new Set(rw.frozen || []);
   const wk = R.weekDays(today);
   const actN = R.activeDaysThisWeek(rw, today);
-  const chestOpen = !!rw.chests[R.weekKey(today)];
+  const chestSt = R.chestState(rw, today);
   const wd = t('weekdays');
   const gt = gateOf(g);
   // mode card: when the review gate is on, practice modes are locked (a tap explains why instead of starting)
@@ -380,7 +381,9 @@ function screenHome(g) {
           const on = (rw.days[d] || 0) > 0, fz = !on && frozen.has(d);
           return `<li class="${on ? 'on' : ''} ${fz ? 'fz' : ''} ${d === today ? 'now' : ''} ${d > today ? 'fut' : ''}"><i aria-hidden="true">${on ? '🔥' : fz ? blanketIcon() : ''}</i><small>${wd[i]}</small></li>`;
         }).join('')}</ol>
-        <div class="chest ${chestOpen ? 'open' : ''}"><span aria-hidden="true">🎁</span><small>${chestOpen ? t('chestReady') : t('weekChest', Math.min(actN, R.chestDays(g)), R.chestDays(g))}</small></div>
+        ${chestSt === 'ready'
+          ? `<button type="button" class="chest ready" data-act="open-chest"><span aria-hidden="true">🎁</span><small>${t('chestOpenBtn')}</small></button>`
+          : `<div class="chest ${chestSt === 'opened' ? 'open' : ''}"><span aria-hidden="true">${chestSt === 'opened' ? '✅' : '🎁'}</span><small>${chestSt === 'opened' ? t('chestOpened') : t('weekChest', Math.min(actN, R.chestDays(g)), R.chestDays(g))}</small></div>`}
       </div>
     </section>
     ${act ? `<section class="resume">
@@ -657,7 +660,7 @@ function rewardBlock(rec) {
   ${fx.surprise ? `<section class="surprise">${owl('cheer', 'owl-md pop')}${giftBox()}<div><h3>${t('surpriseTitle')}</h3><p>${esc(t('surpriseText', fx.surprise))}</p></div></section>` : ''}
   ${fx.goalBonus ? `<section class="goalcard">${owl('cheer', 'owl-md spin')}<div><h3>🎯 ${t('goalBonusTitle')}</h3><p>${esc(t('goalBonusText', fx.goalBonus))}</p></div></section>` : ''}
   ${fx.levelUp ? `<section class="levelup">${owl('cheer', 'owl-lg pop')}<div><h3>${t('levelUpTitle')}</h3><p>${esc(t('levelUpText', fx.levelUp, rankName(fx.levelUp)))}</p>${fx.newN ? `<p class="lv-new">✨ ${esc(t('levelUpNew', fx.newN))}</p>` : ''}</div></section>` : ''}
-  ${fx.chest ? `<section class="chestcard"><span class="chest-ic" aria-hidden="true">🎁</span><div><h3>${t('chestTitle')}</h3><p>${esc(t('chestText', fx.chest, R.chestDays(route().g)))}</p></div></section>` : ''}
+  ${fx.chestReady ? `<section class="chestcard"><span class="chest-ic" aria-hidden="true">🎁</span><div><h3>${t('chestReadyTitle')}</h3><p>${esc(t('chestReadyText'))}</p></div></section>` : ''}
   ${fx.surpriseIn && !fx.surprise ? `<p class="rinfo soon-gift"><span aria-hidden="true">🎁</span> ${esc(t('surpriseIn', fx.surpriseIn))}</p>` : ''}
   ${fx.freezeUsed ? `<p class="rinfo">${blanketIcon()} ${esc(t('freezeUsed', fx.freezeUsed))}</p>` : ''}
   ${fx.freezeEarned ? `<p class="rinfo">${blanketIcon()} ${esc(t('freezeEarned'))}</p>` : ''}`;
@@ -886,9 +889,42 @@ function screenProgress(g) {
         <button class="btn second" data-act="export">⬇ ${t('exportBtn')}</button>
         <label class="btn second filebtn">⬆ ${t('importBtn')}<input type="file" accept="application/json,.json" data-change="import" hidden></label>
       </div>
+      ${(() => { const bk = store.backups(g); return bk.length ? `<details class="restore"><summary>${t('restoreTitle')}</summary><p class="muted">${t('restoreNote')}</p><ul class="bk">${bk.map((b) => `<li><span>${fmtDate(b.day + 'T12:00:00')}</span><span>🦴 ${(b.grade.rw && b.grade.rw.bones) || 0} · ${t('levelShort', L.rankOf((b.grade.rw && b.grade.rw.earned) || 0).n)}</span><button class="btn second sm" data-act="restore" data-day="${b.day}">${t('restoreBtn')}</button></li>`).join('')}</ul></details>` : ''; })()}
       <button class="btn danger-ghost" data-act="reset">${t('resetBtn')}</button>
     </section>
   </main>`;
+}
+
+
+/* ---------------- hidden parent panel: #/szulo/<secret> ---------------- */
+const ADMIN_HASH = 'c06c4cf56dcedf0fa53136c96f72509579dbabaafc3166a90e3229086d3fbff9';
+const adminOk = {};
+async function sha256(s) {
+  const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s));
+  return [...new Uint8Array(b)].map((x) => x.toString(16).padStart(2, '0')).join('');
+}
+function screenAdmin(code) {
+  if (adminOk[code] === undefined) {
+    adminOk[code] = null;
+    (crypto && crypto.subtle ? sha256(code) : Promise.resolve('')).then((h) => { adminOk[code] = h === ADMIN_HASH; render(); }).catch(() => { adminOk[code] = false; render(); });
+  }
+  if (adminOk[code] !== true) return adminOk[code] === null ? '<main class="wrap"></main>' : screenStart();
+  const st = store.load();
+  const rows = Object.keys(st.grades).sort().map((k) => {
+    const gr = store.grade(+k);
+    const open = Object.values(gr.problemStats || {}).filter((x) => L.isOpenMistake(x)).length;
+    const pend = gr.pendingReview && Array.isArray(gr.pendingReview.ids) ? gr.pendingReview.ids.length : 0;
+    const rw = gr.rw || {};
+    return `<section class="card adm"><h3>${k}. клас ${gr.nickname ? '· ' + esc(gr.nickname) : ''}</h3>
+      <p>🦴 <b>${rw.bones || 0}</b> (усього зароблено ${rw.earned || 0}, рівень ${L.rankOf(rw.earned || 0).n}) · відкритих помилок: <b>${open}</b> · блокує розбір: <b>${pend}</b></p>
+      <div class="row wrap-row">
+        <button class="btn second" data-act="adm-clear" data-g="${k}">Обнулити помилки</button>
+        <button class="btn second" data-act="adm-bones" data-g="${k}" data-n="50">+50 🦴</button>
+        <button class="btn primary" data-act="adm-bones" data-g="${k}" data-n="100">+100 🦴</button>
+        <button class="btn second" data-act="nav" data-to="#/g/${k}/progress">Резервні копії</button>
+      </div></section>`;
+  }).join('');
+  return `${topBar({ back: '#/', title: 'Батьківська панель' })}<main class="wrap">${rows || '<p class="muted">Ще немає прогресу на цьому пристрої.</p>'}<p class="muted">Ця сторінка не має посилань на сайті. Не показуйте адресу дітям.</p></main>`;
 }
 
 /* ---------------- render ---------------- */
@@ -907,6 +943,7 @@ function render() {
   let html = '';
   if (r.name === 'start') html = screenStart();
   else if (r.name === 'parents') html = screenParents();
+  else if (r.name === 'admin') html = screenAdmin(r.arg);
   else {
     const d = S.data[g];
     if (!Array.isArray(d)) { html = loadingOrError(g); loadGrade(g); }
@@ -1022,7 +1059,7 @@ function finishQuiz(timeUp) {
   S.rv = null;
   go(`#/g/${g}/results/${record.id}`);
   if (timeUp) toast(t('timeUp'), 3000, 'oops');
-  if (L.starsOf(record.acc) >= 2 || fx.levelUp || fx.chest || fx.surprise || fx.goalBonus) setTimeout(() => confetti(), 250);
+  if (L.starsOf(record.acc) >= 2 || fx.levelUp || fx.chestReady || fx.surprise || fx.goalBonus) setTimeout(() => confetti(), 250);
 }
 
 function tickNow() {
@@ -1320,7 +1357,7 @@ const A = {
       if (got) {
         rv.bones += got.n + got.chest;
         rv.bones += got.goalBonus || 0;
-        const msg = got.levelUp ? `${t('levelUpTitle')} ${rankName(got.levelUp)}` : got.goalHit ? t('goalHitBonus', got.goalBonus) : got.chest ? t('chestTitle') : t('plusBones', got.n);
+        const msg = got.levelUp ? `${t('levelUpTitle')} ${rankName(got.levelUp)}` : got.goalHit ? t('goalHitBonus', got.goalBonus) : got.chestReady ? t('chestReadyTitle') : t('plusBones', got.n);
         setTimeout(() => toast(`${bone()} ${esc(msg)}`, 2200, 'cheer'), 60);
       }
       confetti(40);
@@ -1380,6 +1417,36 @@ const A = {
     document.body.appendChild(a); a.click(); a.remove();
     setTimeout(() => URL.revokeObjectURL(a.href), 2000);
     toast(t('exportOk'));
+  },
+  async 'adm-clear'(el) {
+    if (route().name !== 'admin' || adminOk[route().arg] !== true) return;
+    const ok = await confirmBox({ title: 'Обнулити помилки?', text: `${el.dataset.g} клас: усі відкриті помилки стануть виправленими, блокування розбору зникне.`, yes: 'Так', no: t('cancel'), mood: 'think' });
+    if (!ok) return;
+    const gr = store.grade(+el.dataset.g);
+    for (const st of Object.values(gr.problemStats || {})) if (L.isOpenMistake(st)) st.fixed = true;
+    gr.pendingReview = null;
+    store.save(); render(); toast('Готово');
+  },
+  'adm-bones'(el) {
+    if (route().name !== 'admin' || adminOk[route().arg] !== true) return;
+    const gr = store.grade(+el.dataset.g); const n = +el.dataset.n || 0;
+    gr.rw.bones += n; gr.rw.earned += n;
+    store.save(); render(); toast(`+${n} 🦴`);
+  },
+  'open-chest'() {
+    const g = route().g; if (!g) return;
+    const gr = store.grade(g);
+    const got = R.claimChest(gr);
+    if (!got) return;
+    if (Array.isArray(S.data[g])) L.checkBadges(gr, S.byId, [...new Set(regOf(g).map((q) => q.topic))]);
+    store.save(); render(); confetti();
+    toast(esc(t('chestText', got.n, R.chestDays(g))) + (got.levelUp ? ' ' + esc(`${t('levelUpTitle')} ${rankName(got.levelUp)}`) : ''), 3200, 'cheer');
+  },
+  async restore(el) {
+    const g = route().g;
+    const ok = await confirmBox({ title: t('restoreTitle'), text: t('restoreConfirm', el.dataset.day), yes: t('restoreBtn'), no: t('cancel'), mood: 'think' });
+    if (!ok) return;
+    if (store.restore(g, el.dataset.day)) { S.rv = null; render(); toast(t('restoreOk')); }
   },
   async reset() {
     const g = route().g;
@@ -1445,7 +1512,16 @@ document.addEventListener('keydown', (ev) => {
 });
 
 window.addEventListener('hashchange', () => { S.rv = null; render(); });
-document.addEventListener('visibilitychange', () => { if (document.hidden && route().name === 'quiz' && activeSess()) { tickNow(); store.save(); } syncAutoHint(); });
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden && store.refresh()) { S.rv = null; render(); }
+  if (document.hidden && route().name === 'quiz' && activeSess()) { tickNow(); store.save(); }
+  syncAutoHint();
+});
+// another tab (or the installed app) saved newer progress: adopt it at once
+window.addEventListener('storage', (e) => { if (e.key === 'zrinyi.v1' && store.refresh()) { S.rv = null; render(); } });
+// page restored from the back-forward cache: its memory may be old
+window.addEventListener('pageshow', (e) => { if (e.persisted && store.refresh()) { S.rv = null; render(); } });
+store.onExternalChange(() => { S.rv = null; render(); toast(t('syncedNewer')); });
 
 /* ---------------- boot ---------------- */
 (function boot() {

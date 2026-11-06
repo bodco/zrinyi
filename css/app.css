@@ -890,3 +890,17 @@ body.band-teen .archie-scene.sc-shop { height: calc(100px * var(--sk)); }
 .soon-gift { background: #FFF1F7; color: #7A2E55; }
 @media (max-width: 359px) { .surprise, .goalcard { padding: 10px; gap: 8px; } .surprise .owl, .goalcard .owl { width: 48px; height: 50px; } .giftbox { width: 36px; height: 36px; } .surprise h3, .goalcard h3 { font-size: 17px; } }
 @media (prefers-reduced-motion: reduce) { .giftbox, .goalcard .owl { animation: none !important; } }
+
+/* restore from daily backup */
+.restore { margin: 8px 0 12px; }
+.restore summary { cursor: pointer; font-weight: 800; min-height: 44px; display: flex; align-items: center; }
+.restore .bk { list-style: none; padding: 0; margin: 8px 0 0; display: grid; gap: 8px; }
+.restore .bk li { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; justify-content: space-between; padding: 8px 10px; border: 2px solid var(--line); border-radius: 12px; background: var(--surface); }
+.restore .bk .btn { min-height: 44px; }
+
+/* weekly chest ready to open */
+.chest.ready { min-height: 64px; border: 2px solid #F59E0B; border-radius: 14px; background: #FFF7E0; padding: 4px 2px; cursor: pointer; font: inherit; animation: chestPulse 1.4s ease-in-out infinite; }
+.chest.ready span { filter: none; opacity: 1; }
+.chest.ready small { color: #B45309; }
+@keyframes chestPulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.08) rotate(-3deg); } }
+@media (prefers-reduced-motion: reduce) { .chest.ready { animation: none; } }

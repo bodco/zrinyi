@@ -952,7 +952,42 @@ function screenAdmin(code) {
 }
 
 /* ---------------- render ---------------- */
+/* ---------------- auto update ----------------
+   version.json on the server says which version is live. When it differs from APP_VERSION, the page reloads itself,
+   but only at a safe moment: never during a quiz or a mistake review (progress is saved anyway, but a reload there
+   would drop the chosen-but-not-confirmed answer and open hints), never with a dialog open. */
+const APP_VERSION = 'zrinyi-v15';
+let updateReady = false;
+const SAFE_ROUTES = ['start', 'home', 'progress', 'parents', 'shop', 'admin'];
+function safeToReload() {
+  const r = route();
+  return SAFE_ROUTES.includes(r.name) && !S.modal && !(r.g && store.hasGrade(r.g) && store.grade(r.g).active && r.name === 'quiz');
+}
+function maybeReload() {
+  if (!updateReady || !safeToReload()) return;
+  try { sessionStorage.setItem('zrinyi.upd', updateReady); } catch (e) { /* ignore */ }
+  updateReady = false;
+  try { store.save(); } catch (e) { /* ignore */ }
+  location.reload();
+}
+async function checkUpdate() {
+  if (updateReady || !/^https?:/.test(location.protocol)) return;
+  try {
+    const res = await fetch('version.json?t=' + Date.now(), { cache: 'no-store' });
+    if (!res.ok) return;
+    const v = (await res.json()).v;
+    let tried = null;
+    try { tried = sessionStorage.getItem('zrinyi.upd'); } catch (e) { /* ignore */ }
+    // reload once per new version: if the reload still serves old files (caches), do not loop
+    if (v && v !== APP_VERSION && tried !== v) { updateReady = v; maybeReload(); }
+  } catch (e) { /* offline */ }
+}
+setInterval(checkUpdate, 5 * 60 * 1000);
+setTimeout(checkUpdate, 15 * 1000);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) checkUpdate(); });
+
 function render() {
+  setTimeout(maybeReload, 0);
   const r = route();
   const g = r.g;
   document.body.className = `band-${g ? band(g) : 'start'} ${g ? `g${g}` : ''} scr-${r.name}`;
@@ -1597,6 +1632,6 @@ store.onExternalChange(() => { S.rv = null; render(); toast(t('syncedNewer')); }
   ana.setUser({ ui_lang: S.lang });
   render();
   if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
-    navigator.serviceWorker.register('sw.js').catch(() => {});
+    navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).catch(() => {});
   }
 })();

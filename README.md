@@ -96,3 +96,20 @@
 
 ## Локальний запуск
 `python3 -m http.server` у цій папці, потім відкрити http://localhost:8000
+## Аналітика (Google Analytics 4)
+`js/analytics.js`, property "Zrinyi (zrinyi.bodco.pm)", `G-DDQG89BBRH`. Працює лише на zrinyi.bodco.pm (на localhost вимкнена, `?ga` вмикає для тестів, `?debug` додає DebugView). Банера згоди немає.
+- Пристрій: випадковий id у localStorage `zrinyi.did`, іде як `user_id` і user property `device_id`. Одна дитина = пристрій + клас, параметр `learner_id` = `<device_id>.g<клас>` (брати й сестри на одному пристрої мають різні класи).
+- Ніколи не надсилаються імена (nickname), тексти задач і будь-що, що дитина пише. Лише id задач, літери A-E, лічильники й час.
+- page_view на кожен екран (`/g/5/quiz`, ids сесій прибрано), enhanced measurement без history-подій.
+- Задачі: `problem_answer` (problem_id, topic, difficulty, source_type, mode, position, outcome correct/wrong/skipped, hints_used, time_ms, first_pick_ms, option_changes, tab_leaves, away_ms, speed), у пробному конкурсі надсилаються всі разом при завершенні з повним часом на кожну задачу.
+- Підказки `hint_open` (auto 0/1, hint_level), розбір `review_start`, `review_answer` (attempt, outcome), `review_giveup`, `solution_open`, `solution_step`, `review_finish`.
+- Сесії `quiz_start`, `quiz_finish`, `quiz_quit`, `quiz_resume`, `quiz_discard`, `quiz_pause`, `gate_blocked`; пробний `mock_jump`, `mock_back`, `mock_skip`, `mock_grid`, `mock_finish_ask`, `answer_clear`.
+- Вихід з вкладки посеред задачі: `tab_hidden`, `tab_return` (away_ms).
+- Нагороди й налаштування: `shop_buy`, `shop_cancel`, `outfit_change`, `goal_set`, `level_set`, `autohints_toggle`, `badge_earned`, `level_up`, `chest_open`, `lang_change`, `nickname_set` (лише has_name), `progress_export`, `progress_import`, `grade_reset`, `data_error`, `js_error`.
+- Скриня тижня тепер відкривається кнопкою на головній: подія `chest_ready` (готова), `chest_open` (відкрита, bones).
+
+## Захист прогресу
+- Кожен клас має лічильник `rev`. Вкладка зі старою копією в памʼяті не може перезаписати новіший прогрес: при конфлікті перемагає збережена версія, вкладка її підтягує (подія `storage`, повернення на вкладку, bfcache).
+- Запис ніколи не зменшує `rw.earned` (крім скидання, імпорту, відновлення).
+- Щоденні резервні копії в `zrinyi.v1.bak` (10 днів, на кожен день найкраща копія класу). Відновлення: сторінка прогресу, "Відновити попередню копію".
+- Прихована батьківська панель `#/szulo/<код>` (код не зберігається в коді, лише його SHA-256): обнулити помилки, +50/+100 кісточок.
